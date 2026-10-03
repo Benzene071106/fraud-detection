@@ -1,0 +1,15 @@
+{
+  "q": 0.003,
+  "min_match": 4,
+  "if_gate": 0.0,
+  "alert_at": 60.0,
+  "review_at": 39.6,
+  "rule_features": [
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Fwd Packets Length Total",
+    "Bwd Packet Length Max",
+    "Fwd Act Data Packets",
+    "Flow Duration"
+  ]
+}

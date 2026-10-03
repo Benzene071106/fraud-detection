@@ -1,0 +1,18 @@
+{
+  "min":{
+    "Total Fwd Packets":20.0,
+    "Total Backward Packets":20.0,
+    "Fwd Packets Length Total":1912.0,
+    "Bwd Packet Length Max":976.0,
+    "Fwd Act Data Packets":16.0,
+    "Flow Duration":223019.945
+  },
+  "max":{
+    "Total Fwd Packets":26.0,
+    "Total Backward Packets":22.0,
+    "Fwd Packets Length Total":2008.0,
+    "Bwd Packet Length Max":976.0,
+    "Fwd Act Data Packets":16.0,
+    "Flow Duration":436729.83
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "Benign": 0.5,
+  "BruteForce": 0.5,
+  "DoS": 0.5,
+  "DDoS": 0.5,
+  "Bot": 0.5,
+  "Web": 0.95,
+  "Infiltration": 0.8
+}

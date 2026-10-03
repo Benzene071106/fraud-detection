@@ -1,0 +1,25 @@
+{
+  "data": "Bruteforce-Wednesday-14-02-2018_TrafficForML_CICFlowMeter.parquet",
+  "features": [
+    "Flow Duration",
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Fwd Packets Length Total",
+    "Fwd Packet Length Max",
+    "Bwd Packet Length Max",
+    "Flow Bytes/s",
+    "Flow Packets/s",
+    "Flow IAT Mean",
+    "Flow IAT Max",
+    "Bwd IAT Total",
+    "Fwd Header Length",
+    "Packet Length Mean",
+    "Fwd Act Data Packets",
+    "Idle Min",
+    "Active Max"
+  ],
+  "use_log": true,
+  "max_samples": 4096,
+  "threshold": 0.6182541935696829,
+  "target_fpr": 0.01
+}
