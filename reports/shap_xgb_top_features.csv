@@ -1,0 +1,61 @@
+class,rank,feature,mean_abs_shap
+BruteForce,1,Fwd Act Data Packets,8.2834
+BruteForce,2,Fwd Header Length,4.1756
+BruteForce,3,Bwd Header Length,1.2557
+BruteForce,4,Fwd IAT Min,0.7328
+BruteForce,5,Flow Packets/s,0.572
+BruteForce,6,Bwd IAT Total,0.2621
+BruteForce,7,Bwd Packets/s,0.2248
+BruteForce,8,Flow IAT Max,0.2082
+BruteForce,9,Fwd IAT Max,0.2073
+BruteForce,10,Flow IAT Min,0.1972
+DoS,1,Fwd Header Length,2.9497
+DoS,2,Bwd Packets/s,1.6677
+DoS,3,Flow IAT Min,1.058
+DoS,4,Bwd Packet Length Std,0.6733
+DoS,5,Total Backward Packets,0.5744
+DoS,6,Fwd Packet Length Max,0.5484
+DoS,7,Fwd IAT Min,0.4847
+DoS,8,Flow IAT Max,0.474
+DoS,9,Fwd IAT Max,0.442
+DoS,10,Bwd Packet Length Max,0.428
+DDoS,1,Bwd Packet Length Std,2.6306
+DDoS,2,Fwd Packets Length Total,1.8536
+DDoS,3,Fwd Packet Length Max,0.9963
+DDoS,4,Fwd Packet Length Mean,0.8405
+DDoS,5,Fwd Header Length,0.7621
+DDoS,6,ACK Flag Count,0.6976
+DDoS,7,Idle Mean,0.464
+DDoS,8,Fwd IAT Total,0.434
+DDoS,9,Packet Length Std,0.3805
+DDoS,10,Idle Min,0.3301
+Bot,1,Bwd Packet Length Max,2.4134
+Bot,2,Fwd Packet Length Mean,1.7883
+Bot,3,Flow Duration,1.7117
+Bot,4,Bwd Packets/s,1.2512
+Bot,5,Fwd Packets/s,0.8495
+Bot,6,Fwd Header Length,0.7392
+Bot,7,Flow IAT Max,0.7274
+Bot,8,Fwd IAT Max,0.7193
+Bot,9,Packet Length Mean,0.7001
+Bot,10,Bwd Packet Length Mean,0.6677
+Web,1,Flow IAT Min,1.4227
+Web,2,Fwd Act Data Packets,1.0993
+Web,3,Fwd IAT Min,0.8971
+Web,4,Bwd Packet Length Max,0.7087
+Web,5,Fwd Packet Length Min,0.687
+Web,6,RST Flag Count,0.6835
+Web,7,Flow Duration,0.6555
+Web,8,Fwd IAT Total,0.603
+Web,9,Packet Length Max,0.5791
+Web,10,Fwd IAT Max,0.5772
+Infiltration,1,Fwd Header Length,0.4422
+Infiltration,2,RST Flag Count,0.174
+Infiltration,3,Fwd IAT Std,0.1624
+Infiltration,4,Packet Length Max,0.155
+Infiltration,5,Flow Duration,0.1457
+Infiltration,6,Flow IAT Min,0.1179
+Infiltration,7,Flow IAT Max,0.1168
+Infiltration,8,ECE Flag Count,0.105
+Infiltration,9,Packet Length Std,0.0932
+Infiltration,10,Bwd IAT Min,0.0929
