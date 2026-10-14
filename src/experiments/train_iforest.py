@@ -9,9 +9,9 @@ from sklearn.metrics import (roc_auc_score, average_precision_score,
 import joblib
 
 try:
-    ROOT = Path(__file__).resolve().parents[1]
+    ROOT = Path(__file__).resolve().parents[2]
 except NameError:
-    ROOT = Path.cwd().parent if Path.cwd().name == "src" else Path.cwd()
+    ROOT = Path.cwd().parent.parent if Path.cwd().name == "experiments" else Path.cwd()
 
 DATA_FILE = ROOT / "data" / "raw" / "Bruteforce-Wednesday-14-02-2018_TrafficForML_CICFlowMeter.parquet"
 MODEL_DIR = ROOT / "models"

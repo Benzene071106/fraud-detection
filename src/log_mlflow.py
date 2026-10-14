@@ -3,7 +3,7 @@
 #   - the deployed model: parameters, test metrics, files, and the XGBoost booster registered as
 #     "threat-detector-xgb" in the model registry
 #   - drift run (reports/drift/summary.csv) and incident-level eval (reports/incident_eval.csv)
-# Idempotent: a run whose name already exists is skipped (use --force to log again).
+# Idempotent: a run whose name already exists is skipped; --force replaces it (old run deleted).
 # Usage:  python -m src.log_mlflow            then   mlflow ui --backend-store-uri sqlite:///mlflow.db
 import argparse
 import json
@@ -30,7 +30,8 @@ mlflow.set_experiment(EXP)
 REP, MOD = ROOT / "reports", ROOT / "models"
 from api.detector import XGB_TAG  # noqa: E402  (deployed model tag)
 
-existing = set(mlflow.search_runs(experiment_names=[EXP], output_format="pandas").get("tags.mlflow.runName", []))
+_runs = mlflow.search_runs(experiment_names=[EXP], output_format="pandas")
+existing = {} if _runs.empty else _runs.groupby("tags.mlflow.runName")["run_id"].apply(list).to_dict()
 
 
 def clean(name):
@@ -46,7 +47,9 @@ def start(name):
     if name in existing and not args.force:
         print(f"[skip] {name}")
         return None
-    print(f"[log ] {name}")
+    for rid in existing.get(name, []):          # --force: replace, do not duplicate
+        mlflow.delete_run(rid)
+    print(f"[{'redo' if name in existing else 'log '}] {name}")
     return mlflow.start_run(run_name=name)
 
 

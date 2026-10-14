@@ -3,7 +3,7 @@
 from pathlib import Path
 import pandas as pd
 
-SRC_DIR = Path(__file__).resolve().parents[1] / "data" / "nf_uq_v2"
+SRC_DIR = Path(__file__).resolve().parents[2] / "data" / "nf_uq_v2"
 files = [p for p in SRC_DIR.rglob("*") if p.suffix.lower() in (".csv", ".parquet")]
 if not files:
     raise SystemExit(f"No CSV/Parquet found under {SRC_DIR}")

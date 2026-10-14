@@ -8,9 +8,9 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 try:
-    ROOT = Path(__file__).resolve().parents[1]
+    ROOT = Path(__file__).resolve().parents[2]
 except NameError:
-    ROOT = Path.cwd().parent if Path.cwd().name == "src" else Path.cwd()
+    ROOT = Path.cwd().parent.parent if Path.cwd().name == "experiments" else Path.cwd()
 
 SRC = ROOT / "data" / "raw_2017" / "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv"
 REF = ROOT / "data" / "processed" / "all_days.parquet"

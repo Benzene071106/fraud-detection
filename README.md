@@ -120,4 +120,6 @@ streamlit run dashboard/app.py                   # terminal 2: dashboard at http
 | `src/export_powerbi.py` | reporting tables for Power BI |
 | `src/drift_monitor.py` | drift monitoring (PSI/KS, Evidently HTML) |
 | `src/log_mlflow.py` | MLflow experiment tracking + model registry |
+| `src/build_dataset.py`, `src/iforest_tuning.py`, `src/hybrid_v2.py`, `src/export_service_assets.py` | rebuild the dataset, Isolation Forest v2, Rule R1 v2 and API assets |
+| `src/experiments/` | one-off analyses behind the report's numbers (cross-day, leave-one-attack-out, ablations, NetFlow) |
 | `Dockerfile`, `docker-compose.yml`, `monitoring/` | container stack, Prometheus config + alert rules, Grafana dashboard |

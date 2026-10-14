@@ -11,9 +11,9 @@ import pyarrow as pa
 import pyarrow.csv as pacsv
 
 try:
-    ROOT = Path(__file__).resolve().parents[1]
+    ROOT = Path(__file__).resolve().parents[2]
 except NameError:
-    ROOT = Path.cwd().parent if Path.cwd().name == "src" else Path.cwd()
+    ROOT = Path.cwd().parent.parent if Path.cwd().name == "experiments" else Path.cwd()
 
 SRC = ROOT / "data" / "nf_uq_v2" / "NF-UQ-NIDS-v2.csv"
 OUT = ROOT / "data" / "processed" / "nfuq_sample.parquet"

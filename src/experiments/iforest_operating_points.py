@@ -7,9 +7,9 @@ import joblib
 from sklearn.metrics import f1_score, confusion_matrix
 
 try:
-    ROOT = Path(__file__).resolve().parents[1]
+    ROOT = Path(__file__).resolve().parents[2]
 except NameError:
-    ROOT = Path.cwd().parent if Path.cwd().name == "src" else Path.cwd()
+    ROOT = Path.cwd().parent.parent if Path.cwd().name == "experiments" else Path.cwd()
 
 MODEL_DIR = ROOT / "models"
 with open(MODEL_DIR / "iforest_v2_config.json") as f:

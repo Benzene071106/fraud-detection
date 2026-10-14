@@ -7,9 +7,9 @@ pd.set_option("display.max_columns", 100)
 
 # %% Find project root
 try:
-    ROOT = Path(__file__).resolve().parents[1]
+    ROOT = Path(__file__).resolve().parents[2]
 except NameError:
-    ROOT = Path.cwd().parent if Path.cwd().name == "src" else Path.cwd()
+    ROOT = Path.cwd().parent.parent if Path.cwd().name == "experiments" else Path.cwd()
 
 DATA_DIR = ROOT / "data" / "raw"
 print(ROOT)
