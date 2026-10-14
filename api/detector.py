@@ -38,9 +38,11 @@ class HybridDetector:
             with open(dfile) as f:
                 dec = json.load(f)
             self.mode, tm = dec["mode"], dec["thresholds"]
+            self.pool_thr = float(dec.get("pool_threshold", 1.01))
         else:
             with open(MODEL_DIR / f"{xgb_tag}_variantB_thresholds.json") as f:
                 self.mode, tm = "perclass", json.load(f)
+            self.pool_thr = 1.01
         self.thr = np.array([tm[c] for c in self.classes])
         self.model = xgb.XGBClassifier()
         self.model.load_model(MODEL_DIR / f"{xgb_tag}.json")
@@ -71,17 +73,24 @@ class HybridDetector:
         df = pd.DataFrame(flows)[self.required].astype("float64")
         X = (add_ratio_features(df) if self.ratio else df)[self.xfeats].astype("float32")
 
-        # 1) XGBoost with per-class thresholds (flood mode: DoS+DDoS pooled, assigned to the larger of the two)
+        # 1) XGBoost with per-class thresholds.
+        #    flood    : DoS+DDoS probabilities pooled, assigned to the larger of the two, then thresholded.
+        #    flood_or : normal per-class decision, PLUS any still-benign flow whose pooled DoS+DDoS
+        #               probability >= pool_threshold is assigned to the larger of the two.
         P = self.model.predict_proba(X)
         Q = P.copy()
+        pool = P[:, self.DOS] + P[:, self.DDOS]
+        top = np.where(P[:, self.DOS] >= P[:, self.DDOS], self.DOS, self.DDOS)
         if self.mode == "flood":
-            pool = P[:, self.DOS] + P[:, self.DDOS]
-            dos_top = P[:, self.DOS] >= P[:, self.DDOS]
-            Q[:, self.DOS] = np.where(dos_top, pool, 0.0)
-            Q[:, self.DDOS] = np.where(dos_top, 0.0, pool)
+            Q[:, self.DOS] = np.where(top == self.DOS, pool, 0.0)
+            Q[:, self.DDOS] = np.where(top == self.DDOS, pool, 0.0)
         masked = np.where(Q >= self.thr, Q, -1.0)
         masked[:, 0] = -0.5
         cls = masked.argmax(axis=1)
+        if self.mode == "flood_or":
+            add = (cls == 0) & (pool >= self.pool_thr)
+            cls = np.where(add, top, cls)
+            Q[add, top[add]] = pool[add]
 
         # 2) Rule R1 v2 (SSH session pattern)
         count = np.zeros(len(df), dtype=int)

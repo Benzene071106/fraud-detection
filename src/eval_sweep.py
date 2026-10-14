@@ -91,35 +91,40 @@ def report(P, y, ifs, rule, thr, mode):
     return row
 
 
-rows, chosen = [], {}
-for pf in sorted(OUT.glob("*_P.npz")):
-    name = pf.name[:-6]
-    P = np.load(pf)
-    for mode in ["perclass", "flood"]:
-        if len(sys.argv) > 1 and sys.argv[1] not in ("--test",) and name not in sys.argv[1].split(","):
-            continue
-        print(f"{name}/{mode}")
-        b = tune(P["P_va"], A["y_va"], A["rule_va"], mode)
-        if b is None:
-            print(f"{name}/{mode}: no setting meets FPR target"); continue
-        thr = b[2]
-        ti = tune_inf(P["P_va"], A["y_va"], A["if_va"], thr, A["rule_va"], mode)
-        if ti: thr[INF] = ti[0]
-        r = report(P["P_va"], A["y_va"], A["if_va"], A["rule_va"], thr, mode)
-        rows.append({"variant": name, "mode": mode, **r, "thr": np.round(thr, 2).tolist()})
-        chosen[(name, mode)] = thr
+def main():
+    rows, chosen = [], {}
+    for pf in sorted(OUT.glob("*_P.npz")):
+        name = pf.name[:-6]
+        P = np.load(pf)
+        for mode in ["perclass", "flood"]:
+            if len(sys.argv) > 1 and sys.argv[1] not in ("--test",) and name not in sys.argv[1].split(","):
+                continue
+            print(f"{name}/{mode}")
+            b = tune(P["P_va"], A["y_va"], A["rule_va"], mode)
+            if b is None:
+                print(f"{name}/{mode}: no setting meets FPR target"); continue
+            thr = b[2]
+            ti = tune_inf(P["P_va"], A["y_va"], A["if_va"], thr, A["rule_va"], mode)
+            if ti: thr[INF] = ti[0]
+            r = report(P["P_va"], A["y_va"], A["if_va"], A["rule_va"], thr, mode)
+            rows.append({"variant": name, "mode": mode, **r, "thr": np.round(thr, 2).tolist()})
+            chosen[(name, mode)] = thr
 
-res = pd.DataFrame(rows).sort_values("macroF1_exInf", ascending=False)
-pd.set_option("display.width", 250); pd.set_option("display.max_columns", 30)
-print("\n=== VALIDATION (selection) ===")
-print(res.drop(columns="thr").round(4).to_string(index=False))
-print(res[["variant", "mode", "thr"]].to_string(index=False))
+    res = pd.DataFrame(rows).sort_values("macroF1_exInf", ascending=False)
+    pd.set_option("display.width", 250); pd.set_option("display.max_columns", 30)
+    print("\n=== VALIDATION (selection) ===")
+    print(res.drop(columns="thr").round(4).to_string(index=False))
+    print(res[["variant", "mode", "thr"]].to_string(index=False))
 
-if "--test" in sys.argv:
-    print("\n=== TEST (read once, for the report) ===")
-    trows = []
-    for (name, mode), thr in chosen.items():
-        P = np.load(OUT / f"{name}_P.npz")
-        trows.append({"variant": name, "mode": mode,
-                      **report(P["P_te"], A["y_te"], A["if_te"], A["rule_te"], thr, mode)})
-    print(pd.DataFrame(trows).round(4).to_string(index=False))
+    if "--test" in sys.argv:
+        print("\n=== TEST (read once, for the report) ===")
+        trows = []
+        for (name, mode), thr in chosen.items():
+            P = np.load(OUT / f"{name}_P.npz")
+            trows.append({"variant": name, "mode": mode,
+                          **report(P["P_te"], A["y_te"], A["if_te"], A["rule_te"], thr, mode)})
+        print(pd.DataFrame(trows).round(4).to_string(index=False))
+
+
+if __name__ == "__main__":
+    main()

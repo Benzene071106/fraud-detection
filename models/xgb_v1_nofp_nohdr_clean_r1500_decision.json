@@ -1,5 +1,6 @@
 {
-  "mode": "flood",
-  "thresholds": {"Benign": 0.5, "BruteForce": 0.9, "DoS": 0.97, "DDoS": 0.9, "Bot": 0.7, "Web": 0.95, "Infiltration": 0.9},
-  "tuned_on": "validation split, ALERT FPR <= 0.2%, src.eval_sweep (base variant)"
+  "mode": "flood_or",
+  "thresholds": {"Benign": 0.5, "BruteForce": 0.9, "DoS": 0.7, "DDoS": 0.8, "Bot": 0.7, "Web": 0.95, "Infiltration": 0.9},
+  "pool_threshold": 0.97,
+  "tuned_on": "validation split: max macro-F1 (excl. Infiltration) with ALERT FPR <= 0.2%"
 }

@@ -1,0 +1,1 @@
+{"day": "Bruteforce-Wednesday-14-02-2018", "rows": 36177, "flagged": 14296, "incidents": 211, "queue": 2, "real_in_queue": 2, "noise_in_queue": 0, "real_hidden": 0, "precision": 1.0, "attacks_found": "1/2", "missed": ["FTP-BruteForce"], "secs": 183}

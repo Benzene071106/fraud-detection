@@ -24,3 +24,13 @@ Web 19.55%, Infiltration 8.40%, Benign 1.25%, Bot 0.12%, BruteForce 0.09%, DoS 0
 
 Replay (incident queue, synthetic IPs), robust model: 0 noise incidents in queue on all days run;
 attacks found: Web1 3/3, Web2 3/3, Infil1 1/1, Infil2 1/1, DoS1 2/2, DDoS2 2/2, Botnet 1/1, DoS2 1/2 (SlowHTTPTest, 5 test flows).
+
+UPDATE (17:15): flood_or decision = per-class thresholds PLUS pooled DoS+DDoS >= 0.97 for still-benign flows.
+Reason: pure flood mode raised the DoS bar to 0.97 and lost 3/12 FTP-BruteForce flows (P_DoS 0.90-0.95).
+Chosen on validation by the same rule (max macro-F1 excl. Inf, ALERT FPR <= 0.2%):
+thresholds BF 0.9, DoS 0.7, DDoS 0.8, Bot 0.7, Web 0.95, Inf 0.9, pool 0.97
+          alert_fpr%  prec@1%  detect_A+R%  macroF1_exInf  DoS%   DDoS%
+VAL       0.1831      0.8288   88.36        0.9157         91.11  96.66
+TEST      0.1742      0.8357   88.42        0.9227         90.96  96.73
+Trade-off vs pure flood (TEST): +1.4 pts DoS, +0.0013 macro-F1, but ALERT FPR 0.144% -> 0.174%, precision 0.860 -> 0.836.
+Deployed: flood_or (pre-declared selection rule).
