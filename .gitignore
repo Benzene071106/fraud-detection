@@ -12,3 +12,4 @@ models/*
 !models/*_thresholds.json
 !models/rule_*.json
 !reports/*.csv
+!models/*_decision.json

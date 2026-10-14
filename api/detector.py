@@ -1,16 +1,19 @@
 """Hybrid detector: XGBoost (Variant B thresholds) + Rule R1 v2 + Isolation Forest v2, with SHAP reasons."""
 from pathlib import Path
 import json
+import os
 import joblib
 import numpy as np
 import pandas as pd
 import xgboost as xgb
 
+from api.features import RATIO_FEATURES, RATIO_INPUTS, add_ratio_features
 from api.mitre import map_flow
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_DIR = ROOT / "models"
-XGB_TAG = "xgb_v1_nofp_clean_r1500"
+# Override with the XGB_TAG env var, e.g. XGB_TAG=xgb_v1_nofp_nohdr_clean_r1500
+XGB_TAG = os.getenv("XGB_TAG", "xgb_v1_nofp_nohdr_clean_r1500")
 REVIEW_BUDGET = 0.01
 
 
@@ -25,8 +28,19 @@ class HybridDetector:
         self.BF = self.classes.index("BruteForce")
         self.INF = self.classes.index("Infiltration")
 
-        with open(MODEL_DIR / f"{xgb_tag}_variantB_thresholds.json") as f:
-            tm = json.load(f)
+        self.ratio = bool(cfg.get("ratio_features", False))   # engineered ratios computed here, not sent by clients
+        self.DOS, self.DDOS = self.classes.index("DoS"), self.classes.index("DDoS")
+        # Decision rule: "<tag>_decision.json" ({"mode": "flood", "thresholds": {...}}) if present, else Variant B.
+        # flood = DoS and DDoS probabilities are pooled before thresholding (the model often splits a flood
+        # between the two classes, so neither alone crosses its threshold).
+        dfile = MODEL_DIR / f"{xgb_tag}_decision.json"
+        if dfile.exists():
+            with open(dfile) as f:
+                dec = json.load(f)
+            self.mode, tm = dec["mode"], dec["thresholds"]
+        else:
+            with open(MODEL_DIR / f"{xgb_tag}_variantB_thresholds.json") as f:
+                self.mode, tm = "perclass", json.load(f)
         self.thr = np.array([tm[c] for c in self.classes])
         self.model = xgb.XGBClassifier()
         self.model.load_model(MODEL_DIR / f"{xgb_tag}.json")
@@ -44,7 +58,8 @@ class HybridDetector:
         with open(MODEL_DIR / "benign_medians.json") as f:
             self.medians = json.load(f)
 
-        self.required = sorted(set(self.xfeats) | set(self.if_feats) | set(self.bounds.index) | {"Protocol"})
+        model_inputs = (set(self.xfeats) - set(RATIO_FEATURES)) | (set(RATIO_INPUTS) if self.ratio else set())
+        self.required = sorted(model_inputs | set(self.if_feats) | set(self.bounds.index) | {"Protocol"})
 
     def missing(self, flows):
         req, miss = set(self.required), set()
@@ -54,11 +69,17 @@ class HybridDetector:
 
     def score(self, flows, explain=True, top_k=5):
         df = pd.DataFrame(flows)[self.required].astype("float64")
-        X = df[self.xfeats].astype("float32")
+        X = (add_ratio_features(df) if self.ratio else df)[self.xfeats].astype("float32")
 
-        # 1) XGBoost with per-class thresholds
+        # 1) XGBoost with per-class thresholds (flood mode: DoS+DDoS pooled, assigned to the larger of the two)
         P = self.model.predict_proba(X)
-        masked = np.where(P >= self.thr, P, -1.0)
+        Q = P.copy()
+        if self.mode == "flood":
+            pool = P[:, self.DOS] + P[:, self.DDOS]
+            dos_top = P[:, self.DOS] >= P[:, self.DDOS]
+            Q[:, self.DOS] = np.where(dos_top, pool, 0.0)
+            Q[:, self.DDOS] = np.where(dos_top, 0.0, pool)
+        masked = np.where(Q >= self.thr, Q, -1.0)
         masked[:, 0] = -0.5
         cls = masked.argmax(axis=1)
 
@@ -96,7 +117,7 @@ class HybridDetector:
                 family = self.classes[k] if cls[i] == self.INF else "Unknown anomaly"
             else:
                 verdict, family = "NORMAL", "Benign"
-            p_att = float(P[i, k])
+            p_att = float(Q[i, k]) if Q[i, k] > 0 else float(P[i, k])
             risk = 100 * max(p_att if verdict != "NORMAL" else 0.0,
                              0.95 if rule[i] else 0.0,
                              0.6 * float(pct[i]) if if_flag[i] else 0.0)

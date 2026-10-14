@@ -2,10 +2,13 @@
 # Examples:
 #   python -m src.train_xgb --nofp --clean --noproto --rounds 1000    (baseline without Protocol)
 #   python -m src.train_xgb --nofp --clean --with2017 --rounds 1000   (+ CIC-IDS2017 web day, training only)
+#   python -m src.train_xgb --nofp --nohdr --clean --rounds 1500      (robust model: no header lengths, GPU if available)
 
 # %% Imports + config
 from pathlib import Path
 import argparse
+import os
+import time
 import json
 import numpy as np
 import pandas as pd
@@ -18,6 +21,10 @@ parser.add_argument("--nofp", action="store_true", help="exclude TCP-stack finge
 parser.add_argument("--clean", action="store_true",
                     help="drop Infiltration TRAINING rows that have an exact Benign twin")
 parser.add_argument("--noproto", action="store_true", help="drop the Protocol feature")
+parser.add_argument("--nohdr", action="store_true",
+                    help="drop Fwd/Bwd Header Length (header size per packet leaks the attacker OS TCP options)")
+parser.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto",
+                    help="auto = GPU if XGBoost can use it, otherwise all CPU cores")
 parser.add_argument("--with2017", action="store_true",
                     help="add CIC-IDS2017 web-attack day to TRAINING only (implies --noproto)")
 parser.add_argument("--rounds", type=int, default=600, help="max boosting rounds")
@@ -40,6 +47,8 @@ SEED = 42
 TAG = "xgb_v1"
 if args.nofp:
     TAG += "_nofp"
+if args.nohdr:
+    TAG += "_nohdr"
 if args.clean:
     TAG += "_clean"
 if args.with2017:
@@ -52,6 +61,7 @@ if args.rounds != 600:
 CLASSES = ["Benign", "BruteForce", "DoS", "DDoS", "Bot", "Web", "Infiltration"]
 CMAP = {c: i for i, c in enumerate(CLASSES)}
 FINGERPRINTS = ["Init Fwd Win Bytes", "Init Bwd Win Bytes", "Fwd Seg Size Min"]
+HEADER = ["Fwd Header Length", "Bwd Header Length"]
 INF = CLASSES.index("Infiltration")
 
 # %% Load + features
@@ -61,6 +71,8 @@ raw_feats = [c for c in df.columns if c not in meta]
 features = [c for c in raw_feats if df[c].nunique() > 1]
 if args.nofp:
     features = [c for c in features if c not in FINGERPRINTS]
+if args.nohdr:
+    features = [c for c in features if c not in HEADER]
 if args.noproto:
     features = [c for c in features if c != "Protocol"]
 print(f"Model: {TAG}   Rows: {len(df):,}   Features: {len(features)}   "
@@ -110,7 +122,22 @@ print("Training rows per class:", dict(zip(CLASSES, counts.tolist())))
 print("Class weights:", {c: round(float(wt), 2) for c, wt in zip(CLASSES, class_w)})
 sample_w = class_w[y_train]
 
+# %% Device: GPU trains the trees; CPU cores do loading, hashing and evaluation
+def pick_device(choice):
+    if choice != "auto":
+        return choice
+    try:
+        XGBClassifier(n_estimators=1, tree_method="hist", device="cuda").fit(np.zeros((4, 2)), [0, 1, 0, 1])
+        return "cuda"
+    except Exception:
+        return "cpu"
+
+DEVICE = pick_device(args.device)
+N_JOBS = os.cpu_count() or 4
+print(f"Training on: {DEVICE.upper()}   CPU threads: {N_JOBS}")
+
 # %% Train
+t0 = time.time()
 model = XGBClassifier(
     objective="multi:softprob",
     n_estimators=args.rounds,
@@ -121,7 +148,8 @@ model = XGBClassifier(
     tree_method="hist",
     eval_metric="mlogloss",
     early_stopping_rounds=50 if args.rounds > 600 else 30,
-    n_jobs=19,
+    device=DEVICE,
+    n_jobs=N_JOBS,
     random_state=SEED,
 )
 model.fit(
@@ -130,7 +158,8 @@ model.fit(
     eval_set=[(X.iloc[val_idx], y[val_idx])],
     verbose=100,
 )
-print("Best iteration:", model.best_iteration)
+print(f"Best iteration: {model.best_iteration}   training time: {(time.time() - t0) / 60:.1f} min")
+model.set_params(device="cpu")   # evaluate on CPU: the data is already in RAM, no copy to GPU
 
 # %% Quick argmax check on 2018 test (full evaluation in xgb_thresholds.py)
 pred = model.predict(X.iloc[test_idx])
@@ -147,7 +176,7 @@ print(imp.head(15).round(1).to_string())
 model.save_model(MODEL_DIR / f"{TAG}.json")
 with open(MODEL_DIR / f"{TAG}_config.json", "w") as f:
     json.dump({"features": features, "classes": CLASSES, "exclude_fingerprints": args.nofp,
-               "clean": args.clean, "noproto": args.noproto, "with2017": args.with2017,
+               "clean": args.clean, "noproto": args.noproto, "nohdr": args.nohdr, "device": DEVICE, "with2017": args.with2017,
                "rounds": args.rounds, "best_iteration": int(model.best_iteration)}, f, indent=2)
 print(f"\nSaved {TAG} to {MODEL_DIR}")
 print(f"Next: python -m src.xgb_thresholds --tag {TAG}")

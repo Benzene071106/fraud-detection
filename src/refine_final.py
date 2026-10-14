@@ -1,8 +1,9 @@
 # Refinement: (1) Variant-B ALERT FPR < 0.2%, (2) incident-level evaluation, (3) bootstrap 95% CIs
-# Usage: python -m src.refine_final
+# Usage: python -m src.refine_final [--tag xgb_v1_nofp_nohdr_clean_r1500]
 
 # %% Imports + config
 from pathlib import Path
+import argparse
 import itertools
 import json
 import joblib
@@ -19,7 +20,11 @@ except NameError:
 DATA = ROOT / "data" / "processed" / "all_days.parquet"
 MODEL_DIR = ROOT / "models"
 REPORT_DIR = ROOT / "reports"
-XGB_TAG = "xgb_v1_nofp_clean_r1500"
+DEFAULT_TAG = "xgb_v1_nofp_clean_r1500"
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--tag", default=DEFAULT_TAG)
+XGB_TAG = _ap.parse_known_args()[0].tag
+SUFFIX = "" if XGB_TAG == DEFAULT_TAG else f"_{XGB_TAG}"   # keep the old model's reports intact
 SEED = 42
 REVIEW_BUDGET = 0.01
 BASE_RATE = 0.01
@@ -180,7 +185,7 @@ print(att[["day", "label", "flows", "alert_rate", "flag_rate", "lift_alert", "li
            "detected_ALERT", "detected_ALERT+REVIEW"]].round(3).to_string(index=False))
 print(f"\nIncidents detected: ALERT {att['detected_ALERT'].sum()}/{len(att)}   "
       f"ALERT+REVIEW {att['detected_ALERT+REVIEW'].sum()}/{len(att)}")
-att.to_csv(REPORT_DIR / "incidents_final.csv", index=False)
+att.to_csv(REPORT_DIR / f"incidents_final{SUFFIX}.csv", index=False)
 
 # %% (3) Bootstrap 95% confidence intervals
 rng = np.random.default_rng(SEED)
@@ -203,7 +208,7 @@ ci = pd.DataFrame(stats).quantile([0.025, 0.5, 0.975]).T
 ci.columns = ["low_2.5%", "median", "high_97.5%"]
 print(f"\n(3) BOOTSTRAP 95% CONFIDENCE INTERVALS ({N_BOOT} resamples)")
 print(ci.round(4).to_string())
-ci.to_csv(REPORT_DIR / "bootstrap_ci_final.csv")
+ci.to_csv(REPORT_DIR / f"bootstrap_ci_final{SUFFIX}.csv")
 
 # %% Save refined thresholds
 with open(MODEL_DIR / f"{XGB_TAG}_variantB_thresholds.json", "w") as f:
