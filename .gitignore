@@ -19,3 +19,9 @@ mlflow.db
 mlruns/
 .env
 !models/*_risk.json
+
+# generated / intermediate
+reports/novelty/
+reports/incident_eval/
+reports/*.log
+models/novelty/

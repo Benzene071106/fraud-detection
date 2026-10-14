@@ -25,6 +25,21 @@ Model `xgb_v1_nofp_nohdr_clean_r1500`, decision rule `flood_or` (all thresholds 
 | BruteForce / Bot / DDoS / DoS | 99.8 % / 99.1 % / 96.7 % / 91.0 % |
 | Web / Infiltration (ALERT + REVIEW) | 71.4 % / 7.7 % |
 
+**Unknown attacks** (`python -m src.novelty_eval`, then `python -m src.novelty_threshold`): a second detector is
+fitted on benign traffic only (Gaussian mixture, 80 components + 1-nearest-neighbour distance), so every attack family
+is unseen by it. The combination was chosen on validation, the threshold aims the validation false-alarm rate below
+2 % by a two-sample binomial margin, and the test split gives:
+
+| | False alarms | BruteForce | DoS | DDoS | Bot | Web | Infiltration |
+|---|---|---|---|---|---|---|---|
+| Benign-only GMM + kNN (test) | 1.97 % | 99.6 % | 26.1 % | 59.3 % | 98.9 % | 42.9 % | 5.2 % |
+| Isolation Forest (previous REVIEW trigger) | ~1 % | 0 % | 1 % | 0 % | 0 % | 14 % | 3 % |
+
+It replaces the Isolation Forest as the REVIEW ("Unknown anomaly") trigger in the API (`NOVELTY=0` switches back).
+Honest note: the first threshold (exact 2 % quantile) gave 2.04 % on test; the rule was then corrected once to the
+statistical margin above, with no further tuning. DoS and Web stay below 50 % and Infiltration is not separable on
+flow features (benign twins), so detecting those as *unknown* needs host/time context or payload.
+
 **Calibrated risk score** (`python -m src.calibrate_risk`): risk R means about R % of flows scored like this are
 real attacks, assuming attacks are 1 % of traffic (`RISK_BASE_RATE`). Logistic regression on
 [XGBoost attack logit, Isolation-Forest percentile, Rule R1] + isotonic calibration, fitted on validation, checked on
@@ -45,7 +60,7 @@ mechanism; it is not a real-world precision figure.
 | | Value |
 |---|---|
 | Days / flows replayed | 10 / 424,579 |
-| Analyst queue | 31 incidents = 30 real + 1 noise (queue precision 97 %) |
+| Analyst queue | 32 incidents = 31 real + 1 noise (queue precision 97 %), with the unknown-attack detector on |
 | Attack types found | 17 of 18 (missed: DoS-SlowHTTPTest, 5 test flows) |
 
 ## Drift monitoring (`python -m src.drift_monitor`)
@@ -96,6 +111,8 @@ streamlit run dashboard/app.py                   # terminal 2: dashboard at http
 - Model files (`models/*.json` boosters, `*.joblib`) are not in git; retrain with `python -m src.run_nohdr`.
 
 ## API
+
+Authentication: set `API_KEY` and send header `X-API-Key` (open: `/health`, `/metrics`, docs). Tests: `python -m pytest tests -q` (10 tests).
 
 | Endpoint | Purpose |
 |---|---|

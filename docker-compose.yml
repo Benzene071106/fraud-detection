@@ -29,6 +29,7 @@ services:
     image: soc-threat-detector:latest
     environment:
       DATABASE_URL: postgresql+psycopg://soc:soc@postgres:5432/soc
+      API_KEY: ${API_KEY:-}
       DASHBOARD_URL: http://localhost:8501
       ALERT_MIN_SEVERITY: ${ALERT_MIN_SEVERITY:-HIGH}
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
@@ -53,6 +54,7 @@ services:
               "--server.headless=true", "--browser.gatherUsageStats=false"]
     environment:
       SOC_API_URL: http://api:8000
+      SOC_API_KEY: ${API_KEY:-}
     ports:
       - "8501:8501"
     healthcheck:
@@ -97,6 +99,8 @@ services:
     image: soc-threat-detector:latest
     profiles: ["demo"]
     command: ["python", "-m", "src.replay_ingest", "--url", "http://api:8000"]
+    environment:
+      SOC_API_KEY: ${API_KEY:-}
     volumes:
       - ./data:/app/data:ro
     depends_on:

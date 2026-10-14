@@ -1,11 +1,11 @@
 day,setup,rows,flagged,incidents,queue,real_in_queue,noise_in_queue,real_hidden,precision,attacks_found,missed,secs
-Botnet-Friday-02-03-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,48273,21948,439,1,1,0,1,1.0,1/1,[],168
-Bruteforce-Wednesday-14-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,36177,14305,219,3,3,0,1,1.0,2/2,[],109
-DDoS1-Tuesday-20-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,102313,85412,212,3,2,1,0,0.667,1/1,[],627
-DDoS2-Wednesday-21-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,45267,27466,78,3,3,0,0,1.0,2/2,[],200
-DoS1-Thursday-15-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,38859,7993,403,3,3,0,0,1.0,2/2,[],64
-DoS2-Friday-16-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,40954,19248,20,1,1,0,0,1.0,1/2,['DoS attacks-SlowHTTPTest'],143
-Infil1-Wednesday-28-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,25684,1050,550,5,5,0,0,1.0,1/1,[],13
-Infil2-Thursday-01-03-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,17086,1128,210,5,5,0,1,1.0,1/1,[],10
-Web1-Thursday-22-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,35061,414,368,3,3,0,1,1.0,3/3,[],10
-Web2-Friday-23-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,34905,485,413,4,4,0,0,1.0,3/3,[],10
+Botnet-Friday-02-03-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or+novelty,48273,22071,555,1,1,0,1,1.0,1/1,[],124
+Bruteforce-Wednesday-14-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or+novelty,36177,14505,409,3,3,0,0,1.0,2/2,[],82
+DDoS1-Tuesday-20-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or+novelty,102313,85575,349,4,3,1,0,0.75,1/1,[],455
+DDoS2-Wednesday-21-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or+novelty,45267,27424,36,3,3,0,0,1.0,2/2,[],157
+DoS1-Thursday-15-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or+novelty,38859,8522,861,4,4,0,2,1.0,2/2,[],57
+DoS2-Friday-16-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or+novelty,40954,19274,45,1,1,0,1,1.0,1/2,['DoS attacks-SlowHTTPTest'],106
+Infil1-Wednesday-28-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or+novelty,25684,1610,904,5,5,0,0,1.0,1/1,[],17
+Infil2-Thursday-01-03-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or+novelty,17086,1404,306,5,5,0,1,1.0,1/1,[],11
+Web1-Thursday-22-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or+novelty,35061,718,651,3,3,0,1,1.0,3/3,[],16
+Web2-Friday-23-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or+novelty,34905,741,664,3,3,0,0,1.0,3/3,[],15

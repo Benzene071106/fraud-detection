@@ -17,3 +17,6 @@
 **/__pycache__
 **/*.pyc
 !models/xgb_v1_nofp_nohdr_clean_r1500_risk.json
+!models/novelty/novelty_detector.joblib
+!models/novelty/gmm_80.joblib
+!models/novelty/knn_1.joblib

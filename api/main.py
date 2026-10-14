@@ -1,13 +1,14 @@
 """Threat Detection API - scores flows, stores flagged events, groups them into incidents."""
 import json
 import os
+import secrets
 import time
 from pathlib import Path
 from datetime import datetime
 from typing import Literal
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
-from fastapi.responses import RedirectResponse, Response
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, case
 
@@ -24,6 +25,19 @@ app = FastAPI(
 )
 detector = HybridDetector()
 init_db()
+
+# --- Authentication: when API_KEY is set, every request needs header X-API-Key: <key>.
+# Liveness, Prometheus metrics and the API docs stay open (health checks / scraping / browsing the schema).
+API_KEY = os.getenv("API_KEY") or None
+OPEN_PATHS = {"/", "/health", "/metrics", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}
+
+
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    if API_KEY and request.url.path not in OPEN_PATHS:
+        if not secrets.compare_digest(request.headers.get("X-API-Key", ""), API_KEY):
+            return JSONResponse(status_code=401, content={"detail": "missing or invalid X-API-Key header"})
+    return await call_next(request)
 
 
 class ScoreRequest(BaseModel):
@@ -64,6 +78,8 @@ def model_info():
     return {"model": detector.xgb_tag, "classes": detector.classes,
             "thresholds": dict(zip(detector.classes, detector.thr.tolist())),
             "review_budget": REVIEW_BUDGET, "required_features": detector.required,
+            "unknown_detector": ({"members": list(detector.nov["members"]), "rule": detector.nov["rule"],
+                                  "budget": detector.nov["budget"]} if detector.nov else "isolation_forest"),
             "risk": {"calibrated": detector.risk_cal is not None, "base_rate": detector.base_rate,
                      "meaning": "risk R ~ R% of flows scored like this are attacks, if attacks are "
                                 f"{detector.base_rate:.1%} of traffic" if detector.risk_cal else "heuristic"}}

@@ -38,6 +38,17 @@ Other demo days: `docker compose --profile demo run --rm replay python -m src.re
 Prometheus alert rules (`monitoring/alert_rules.yml`): HighSeverityIncidentOpen, ModelDriftDetected, ScoringSlow, ApiDown.
 Validated with `promtool check config` and against a live API scrape (all dashboard queries return data).
 
+## API key (authentication)
+Put `API_KEY=<long random string>` in `.env` next to `docker-compose.yml` (git-ignored), then `docker compose up -d`.
+The API then requires header `X-API-Key` on every endpoint except `/health`, `/metrics` and the docs; the dashboard
+and the `replay` job receive the same key automatically. Generate a key in PowerShell:
+`-join ((48..57)+(97..122) | Get-Random -Count 32 | % {[char]$_})`. Test:
+```powershell
+curl.exe -s -o NUL -w "%{http_code}" http://localhost:8000/incidents                      # 401
+curl.exe -s -H "X-API-Key: <key>" http://localhost:8000/incidents?limit=1                # 200
+```
+Without `API_KEY` the API stays open (local development).
+
 ## Alerts inside Docker
 Create a `.env` file next to `docker-compose.yml` (it is git-ignored):
 ```

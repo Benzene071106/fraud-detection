@@ -1,1 +1,0 @@
-{"day": "Web2-Friday-23-02-2018", "setup": "xgb_v1_nofp_nohdr_clean_r1500/flood_or", "rows": 34905, "flagged": 485, "incidents": 413, "queue": 4, "real_in_queue": 4, "noise_in_queue": 0, "real_hidden": 0, "precision": 1.0, "attacks_found": "3/3", "missed": [], "secs": 10}

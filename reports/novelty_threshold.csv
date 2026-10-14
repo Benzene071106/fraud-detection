@@ -1,0 +1,3 @@
+threshold rule,threshold,val_fpr%,test_benign_fpr%,test_BruteForce,test_DoS,test_DDoS,test_Bot,test_Web,test_Infiltration
+exact quantile (old),0.98729,1.951,2.0,99.62,26.22,59.6,98.87,42.86,5.23
+"two-sample 95% margin, budget 2%",0.98743,1.931,1.973,99.61,26.07,59.34,98.87,42.86,5.18

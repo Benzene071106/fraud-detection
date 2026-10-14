@@ -2,6 +2,7 @@
 # Usage: python -m src.replay_ingest --day Bruteforce-Wednesday-14-02-2018 --max-rows 40000
 import argparse
 import json
+import os
 import urllib.request
 import zlib
 from collections import Counter
@@ -22,7 +23,19 @@ ap.add_argument("--attack-minutes", type=int, default=60,
 args = ap.parse_args()
 
 ROOT = Path(__file__).resolve().parents[1]
-info = json.load(urllib.request.urlopen(f"{args.url}/model-info"))
+_KEY = os.getenv("SOC_API_KEY")
+
+
+def _open(req):
+    """urlopen that adds the X-API-Key header when SOC_API_KEY is set."""
+    if isinstance(req, str):
+        req = urllib.request.Request(req)
+    if _KEY:
+        req.add_header("X-API-Key", _KEY)
+    return urllib.request.urlopen(req)
+
+
+info = json.load(_open(f"{args.url}/model-info"))
 REQ, CLASSES = info["required_features"], info["classes"]
 
 df = pd.read_parquet(ROOT / "data" / "processed" / "all_days.parquet")
@@ -68,16 +81,16 @@ tot, touched = Counter(), set()
 for b in range(0, len(flows), args.batch):
     req = urllib.request.Request(f"{args.url}/ingest", data=json.dumps({"flows": flows[b:b + args.batch]}).encode(),
                                  headers={"Content-Type": "application/json"})
-    res = json.load(urllib.request.urlopen(req))
+    res = json.load(_open(req))
     tot.update({"scored": res["scored"], "alerts": res["alerts"], "reviews": res["reviews"]})
     touched.update(res["incidents_touched"])
     print(f"  batch {b // args.batch + 1}: scored {res['scored']}, alerts {res['alerts']}, reviews {res['reviews']}")
 
 # ---- report on THIS run's incidents only (the database may hold earlier replays) ----
 attack_targets = set(victim.values())
-every = json.load(urllib.request.urlopen(f"{args.url}/incidents?limit=100000&include_noise=true"))["incidents"]
+every = json.load(_open(f"{args.url}/incidents?limit=100000&include_noise=true"))["incidents"]
 mine = [i for i in every if i["id"] in touched]
-queue_ids = {i["id"] for i in json.load(urllib.request.urlopen(f"{args.url}/incidents?limit=100000"))["incidents"]}
+queue_ids = {i["id"] for i in json.load(_open(f"{args.url}/incidents?limit=100000"))["incidents"]}
 shown = [i for i in mine if i["id"] in queue_ids]
 hidden = [i for i in mine if i["id"] not in queue_ids]
 
@@ -109,14 +122,14 @@ for name, group in [("Real attacks in queue", real_shown), ("Noise still in queu
 print("\nNoise threshold comparison (this run): hide LOW incidents with <= N flagged flows")
 print(f"  {'N':>2}  {'shown':>6}  {'real':>5}  {'noise':>6}  {'real hidden':>11}  {'precision':>9}")
 for n in [1, 2, 3, 5]:
-    ids = {i["id"] for i in json.load(urllib.request.urlopen(
+    ids = {i["id"] for i in json.load(_open(
         f"{args.url}/incidents?limit=100000&noise_max_events={n}"))["incidents"]}
     sh = [i for i in mine if i["id"] in ids]
     r = sum(map(is_real, sh))
     rh = sum(is_real(i) for i in mine if i["id"] not in ids)
     print(f"  {n:>2}  {len(sh):>6}  {r:>5}  {len(sh) - r:>6}  {rh:>11}  {r / max(len(sh), 1):>9.0%}")
 
-summ = json.load(urllib.request.urlopen(f"{args.url}/mitre/summary"))
+summ = json.load(_open(f"{args.url}/mitre/summary"))
 print("\nMITRE techniques across queue incidents (all runs, noise excluded):")
 for t in summ["techniques"]:
     print(f"  {t['technique_id']:<10} {t['technique']:<42} [{t['tactic']}]  incidents={t['incidents']}  flows={t['flows']}")

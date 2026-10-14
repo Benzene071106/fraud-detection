@@ -112,7 +112,7 @@ def run_day(path):
 
 from api.detector import HybridDetector  # noqa: E402
 _det = HybridDetector()
-SETUP = f"{_det.xgb_tag}/{_det.mode}"     # a checkpoint only counts for the same model + decision rule
+SETUP = f"{_det.xgb_tag}/{_det.mode}" + ("+novelty" if _det.nov else "")   # checkpoint valid only for same setup
 print("Setup:", SETUP, flush=True)
 build_cache(_det.required)
 paths = sorted(CACHE.glob("*.parquet"))

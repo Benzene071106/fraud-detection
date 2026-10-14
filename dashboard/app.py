@@ -13,6 +13,7 @@ import requests
 import streamlit as st
 
 DEFAULT_API = os.getenv("SOC_API_URL", "http://127.0.0.1:8000")
+HEADERS = {"X-API-Key": os.environ["SOC_API_KEY"]} if os.getenv("SOC_API_KEY") else {}
 SAMPLE_CSV = Path(__file__).with_name("sample_flows.csv")
 SEV_COLORS = {"HIGH": "#d64545", "MEDIUM": "#e0a030", "LOW": "#8a94a6"}
 CONF_ICON = {"HIGH": "🟥", "MEDIUM": "🟧", "LOW": "⬜"}
@@ -23,31 +24,32 @@ st.set_page_config(page_title="SOC Threat Dashboard", page_icon="🛡️", layou
 
 # ---------------------------------------------------------------- API helpers
 def api_get(path, **params):
-    r = requests.get(f"{st.session_state.api}{path}", params=params, timeout=30)
+    r = requests.get(f"{st.session_state.api}{path}", params=params, headers=HEADERS, timeout=30)
     r.raise_for_status()
     return r.json()
 
 
 def api_post(path, payload):
-    r = requests.post(f"{st.session_state.api}{path}", json=payload, timeout=120)
+    r = requests.post(f"{st.session_state.api}{path}", json=payload, headers=HEADERS, timeout=120)
     r.raise_for_status()
     return r.json()
 
 
 @st.cache_data(ttl=10, show_spinner=False)
 def load_incidents(api, include_noise, limit):
-    return requests.get(f"{api}/incidents", params={"limit": limit, "include_noise": include_noise},
+    return requests.get(f"{api}/incidents", params={"limit": limit, "include_noise": include_noise}, headers=HEADERS,
                         timeout=30).json()
 
 
 @st.cache_data(ttl=10, show_spinner=False)
 def load_incident(api, incident_id, n_events):
-    return requests.get(f"{api}/incidents/{incident_id}", params={"events": n_events}, timeout=30).json()
+    return requests.get(f"{api}/incidents/{incident_id}", params={"events": n_events}, headers=HEADERS,
+                        timeout=30).json()
 
 
 @st.cache_data(ttl=30, show_spinner=False)
 def load_static(api, path):
-    return requests.get(f"{api}{path}", timeout=30).json()
+    return requests.get(f"{api}{path}", headers=HEADERS, timeout=30).json()
 
 
 def fmt_time(iso):
@@ -68,7 +70,15 @@ with st.sidebar:
     st.session_state.api = st.text_input("API URL", value=st.session_state.get("api", DEFAULT_API))
     try:
         health = api_get("/health")
-        st.success(f"API online · model `{health['model']}`")
+        try:
+            api_get("/model-info")                       # protected endpoint: checks the API key
+        except requests.HTTPError as err:
+            if err.response is not None and err.response.status_code == 401:
+                st.error("API is online but rejected the API key. Set SOC_API_KEY to the API's API_KEY "
+                         "(see docs/DOCKER.md) and restart the dashboard.")
+                st.stop()
+            raise
+        st.success(f"API online · model `{health['model']}`" + (" · 🔒 key OK" if HEADERS else ""))
     except Exception as exc:  # noqa: BLE001
         st.error(f"API not reachable at {st.session_state.api}\n\nStart it with:\n"
                  f"`uvicorn api.main:app --port 8000`\n\n({type(exc).__name__})")

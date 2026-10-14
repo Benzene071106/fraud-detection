@@ -69,6 +69,25 @@ class HybridDetector:
             self.risk_cal["iso_y"] = np.asarray(self.risk_cal["iso_y"])
         self.base_rate = float(os.getenv("RISK_BASE_RATE", (self.risk_cal or {}).get("default_base_rate", 0.01)))
 
+        # Unknown-attack detector (src.novelty_eval + src.novelty_threshold): GMM + kNN fitted on benign traffic
+        # only; a flow scoring above the conservative threshold becomes REVIEW "Unknown anomaly".
+        # It replaces the Isolation Forest as the REVIEW trigger; NOVELTY=0 switches back.
+        self.nov = None
+        nfile = MODEL_DIR / "novelty" / "novelty_detector.joblib"
+        if nfile.exists() and os.getenv("NOVELTY", "1") != "0":
+            from sklearn.neighbors import NearestNeighbors
+            det = joblib.load(nfile)
+            members = {}
+            for m in det["members"]:
+                b = joblib.load(MODEL_DIR / "novelty" / f"{m}.joblib")
+                if b["kind"] == "knn":
+                    b["model"] = NearestNeighbors(n_neighbors=b["k"]).fit(b["reference"])
+                members[m] = b
+            first = members[det["members"][0]]
+            self.nov = {"members": members, "threshold": det["threshold"], "ref": det["ref_sorted"],
+                        "scaler": first["scaler"], "features": first["features"], "rule": det.get("threshold_rule"),
+                        "budget": det.get("budget")}
+
         self.required = sorted(model_inputs | set(self.if_feats) | set(self.bounds.index) | {"Protocol"})
 
     def missing(self, flows):
@@ -76,6 +95,17 @@ class HybridDetector:
         for fl in flows:
             miss |= req - fl.keys()
         return sorted(miss)
+
+    def novelty(self, df):
+        n = self.nov
+        X = df[n["features"]].to_numpy(dtype="float64")
+        Z = np.clip(n["scaler"].transform(np.sign(X) * np.log1p(np.abs(X))), -20, 20).astype("float32")
+        pcts = []
+        for name, b in n["members"].items():
+            s = -b["model"].score_samples(Z) if b["kind"] == "gmm" else b["model"].kneighbors(Z)[0].mean(1)
+            ref = n["ref"][name]
+            pcts.append(np.searchsorted(ref, s) / len(ref))
+        return np.max(pcts, axis=0)
 
     def calibrated_risk(self, P, pct, rule):
         c = self.risk_cal
@@ -126,8 +156,12 @@ class HybridDetector:
         pct = np.searchsorted(self.if_ref, s, side="right") / len(self.if_ref)
         if_flag = pct >= 1 - REVIEW_BUDGET
 
+        # 4) Unknown-attack detector (benign-only GMM + kNN), else the Isolation Forest flag
+        nov_pct = self.novelty(df) if self.nov else None
+        unknown = nov_pct > self.nov["threshold"] if self.nov else if_flag
+
         alert = (cls != 0) & (cls != self.INF)
-        review = ~alert & (if_flag | (cls == self.INF))
+        review = ~alert & (unknown | (cls == self.INF))
         cal_risk = self.calibrated_risk(P, pct, rule) if self.risk_cal else None
 
         contrib = None
@@ -161,6 +195,7 @@ class HybridDetector:
                     "xgb_probability": round(p_att, 4),
                     "rule_r1_match": bool(rule[i]),
                     "iforest_percentile": round(float(pct[i]), 4),
+                    "novelty_percentile": round(float(nov_pct[i]), 5) if nov_pct is not None else None,
                 },
             }
             out["mitre"] = (map_flow(family, verdict, df.iloc[i].to_dict(), p_att, bool(rule[i]))

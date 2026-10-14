@@ -131,6 +131,26 @@ if drift.exists():
             for f in ["summary.csv", "top_features.csv", "summary.json"]:
                 mlflow.log_artifact(str(REP / "drift" / f), artifact_path="drift")
 
+# 3b) unknown-attack detector (benign-only GMM + kNN)
+nov = REP / "novelty_eval.csv"
+if nov.exists():
+    run = start("unknown/novelty_detector")
+    if run is not None:
+        with run:
+            t = pd.read_csv(nov)
+            mlflow.set_tags({"stage": "unknown-detection", "protocol": "fit on train benign, combo + threshold on "
+                             "validation, test read once; families never seen by the detector"})
+            thr = REP / "novelty_threshold.csv"
+            if thr.exists():
+                th = pd.read_csv(thr).iloc[-1]
+                mlflow.log_params({"threshold_rule": th["threshold rule"], "threshold": th["threshold"]})
+                mlflow.log_metrics(metrics(th.drop(["threshold rule", "threshold"]), "final_"))
+            for _, r in t.iterrows():
+                mlflow.log_metrics(metrics(r.drop(["budget", "combo"]), f"budget{r['budget'].strip('%')}_"))
+            for f in [nov, thr, REP / "novelty_validation.csv"]:
+                if f.exists():
+                    mlflow.log_artifact(str(f), artifact_path="novelty")
+
 # 4) incident-level evaluation
 inc = REP / "incident_eval.csv"
 if inc.exists():
