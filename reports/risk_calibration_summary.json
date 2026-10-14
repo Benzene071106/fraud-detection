@@ -1,0 +1,16 @@
+{
+ "base_rate": 0.01,
+ "brier_old": 0.0074475403975562135,
+ "brier_new": 0.0016976839995577159,
+ "ece_old": 0.009812766263248484,
+ "ece_new": 0.00014456775090090847,
+ "alerts": 175522,
+ "alerts_with_risk>=99_old%": 84.47374118344139,
+ "alerts_with_risk>=99_new%": 75.4332790191543,
+ "alert_ranking_AP_old": 0.9998237287910623,
+ "alert_ranking_AP_new": 0.9999139260076548,
+ "alert_ranking_AUC_old": 0.9251814759764466,
+ "alert_ranking_AUC_new": 0.9723052161251642,
+ "flagged_ranking_AUC_old": 0.9728391224546782,
+ "flagged_ranking_AUC_new": 0.994727526679313
+}

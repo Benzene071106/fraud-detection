@@ -16,3 +16,4 @@
 !models/hybrid_v2_config.json
 **/__pycache__
 **/*.pyc
+!models/xgb_v1_nofp_nohdr_clean_r1500_risk.json

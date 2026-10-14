@@ -61,6 +61,14 @@ class HybridDetector:
             self.medians = json.load(f)
 
         model_inputs = (set(self.xfeats) - set(RATIO_FEATURES)) | (set(RATIO_INPUTS) if self.ratio else set())
+        # Calibrated risk (src.calibrate_risk): "risk 70" ~ 70% of such flows are attacks at RISK_BASE_RATE.
+        rfile = MODEL_DIR / f"{xgb_tag}_risk.json"
+        self.risk_cal = json.loads(rfile.read_text()) if rfile.exists() else None
+        if self.risk_cal:
+            self.risk_cal["iso_x"] = np.asarray(self.risk_cal["iso_x"])
+            self.risk_cal["iso_y"] = np.asarray(self.risk_cal["iso_y"])
+        self.base_rate = float(os.getenv("RISK_BASE_RATE", (self.risk_cal or {}).get("default_base_rate", 0.01)))
+
         self.required = sorted(model_inputs | set(self.if_feats) | set(self.bounds.index) | {"Protocol"})
 
     def missing(self, flows):
@@ -68,6 +76,16 @@ class HybridDetector:
         for fl in flows:
             miss |= req - fl.keys()
         return sorted(miss)
+
+    def calibrated_risk(self, P, pct, rule):
+        c = self.risk_cal
+        s = np.clip(1 - P[:, 0], 1e-6, 1 - 1e-6)
+        z = (np.column_stack([np.log(s / (1 - s)), pct, rule.astype(float)]) @ np.asarray(c["coef"])
+             + c["intercept"])
+        p = np.clip(np.interp(z, c["iso_x"], c["iso_y"]), 1e-9, 1 - 1e-9)
+        prior = c["val_prior"]
+        odds = p / (1 - p) * (self.base_rate / (1 - self.base_rate)) / (prior / (1 - prior))
+        return 100 * odds / (1 + odds)
 
     def score(self, flows, explain=True, top_k=5):
         df = pd.DataFrame(flows)[self.required].astype("float64")
@@ -110,6 +128,7 @@ class HybridDetector:
 
         alert = (cls != 0) & (cls != self.INF)
         review = ~alert & (if_flag | (cls == self.INF))
+        cal_risk = self.calibrated_risk(P, pct, rule) if self.risk_cal else None
 
         contrib = None
         if explain:
@@ -127,9 +146,12 @@ class HybridDetector:
             else:
                 verdict, family = "NORMAL", "Benign"
             p_att = float(Q[i, k]) if Q[i, k] > 0 else float(P[i, k])
-            risk = 100 * max(p_att if verdict != "NORMAL" else 0.0,
-                             0.95 if rule[i] else 0.0,
-                             0.6 * float(pct[i]) if if_flag[i] else 0.0)
+            if cal_risk is not None:
+                risk = float(cal_risk[i])
+            else:                                       # legacy heuristic (no calibration file)
+                risk = 100 * max(p_att if verdict != "NORMAL" else 0.0,
+                                 0.95 if rule[i] else 0.0,
+                                 0.6 * float(pct[i]) if if_flag[i] else 0.0)
             out = {
                 "verdict": verdict,
                 "family": family,

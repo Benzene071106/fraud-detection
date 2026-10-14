@@ -8,7 +8,8 @@ from api.db import Event, Incident
 # Floods are dense (seconds between flows); credential, web, bot and infiltration activity is
 # sparse and can pause for many minutes between attempts, so it gets a longer window.
 WINDOWS = {
-    "DDoS": timedelta(minutes=15), "DoS": timedelta(minutes=15), "Unknown anomaly": timedelta(minutes=15),
+    "DDoS": timedelta(minutes=15), "Unknown anomaly": timedelta(minutes=15),
+    "DoS": timedelta(minutes=60),          # slow DoS (Slowloris, SlowHTTPTest) and DoS-like slow brute force are sparse
     "BruteForce": timedelta(minutes=60), "Web": timedelta(minutes=60),
     "Bot": timedelta(minutes=60), "Infiltration": timedelta(minutes=60),
 }

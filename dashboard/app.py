@@ -201,7 +201,10 @@ with tab_q:
                 on_select="rerun", selection_mode="single-row",
                 column_config={
                     "id": st.column_config.NumberColumn("ID", width="small"),
-                    "max_risk": st.column_config.ProgressColumn("Risk", min_value=0, max_value=100, format="%d"),
+                    "max_risk": st.column_config.ProgressColumn(
+                        "Risk", min_value=0, max_value=100, format="%d",
+                        help="Calibrated: risk R means about R% of flows scored like this are real attacks "
+                             "(at a 1% attack base rate). False alarms typically score 5-35, real attacks 99-100."),
                     "top_technique": "Top ATT&CK technique",
                     "first": "First seen", "last": "Last seen",
                 })

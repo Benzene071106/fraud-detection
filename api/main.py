@@ -63,7 +63,10 @@ def health():
 def model_info():
     return {"model": detector.xgb_tag, "classes": detector.classes,
             "thresholds": dict(zip(detector.classes, detector.thr.tolist())),
-            "review_budget": REVIEW_BUDGET, "required_features": detector.required}
+            "review_budget": REVIEW_BUDGET, "required_features": detector.required,
+            "risk": {"calibrated": detector.risk_cal is not None, "base_rate": detector.base_rate,
+                     "meaning": "risk R ~ R% of flows scored like this are attacks, if attacks are "
+                                f"{detector.base_rate:.1%} of traffic" if detector.risk_cal else "heuristic"}}
 
 
 @app.post("/score")

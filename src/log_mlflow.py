@@ -89,9 +89,13 @@ if run is not None:
             t = test[(test["variant"] == "base") & (test["mode"] == dec["mode"])]
             if len(t):
                 mlflow.log_metrics(metrics(t.iloc[0].drop(["variant", "mode", "thr"]), "test_"))
+        rc = REP / "risk_calibration_summary.json"
+        if rc.exists():
+            mlflow.log_metrics({clean(f"risk_{k}"): float(v) for k, v in json.loads(rc.read_text()).items()})
         ci = REP / f"bootstrap_ci_final_{XGB_TAG}.csv"
         for f in [MOD / f"{XGB_TAG}_config.json", dec_f, MOD / f"{XGB_TAG}_variantB_thresholds.json", ci,
-                  REP / f"incidents_final_{XGB_TAG}.csv", REP / "sweep_nohdr_validation.txt"]:
+                  REP / f"incidents_final_{XGB_TAG}.csv", REP / "sweep_nohdr_validation.txt",
+                  MOD / f"{XGB_TAG}_risk.json", REP / "risk_calibration.csv", REP / "risk_calibration_summary.json"]:
             if f.exists():
                 mlflow.log_artifact(str(f), artifact_path="files")
         booster = MOD / f"{XGB_TAG}.json"

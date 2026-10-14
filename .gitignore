@@ -18,3 +18,4 @@ reports/drift/*.html
 mlflow.db
 mlruns/
 .env
+!models/*_risk.json

@@ -25,6 +25,12 @@ Model `xgb_v1_nofp_nohdr_clean_r1500`, decision rule `flood_or` (all thresholds 
 | BruteForce / Bot / DDoS / DoS | 99.8 % / 99.1 % / 96.7 % / 91.0 % |
 | Web / Infiltration (ALERT + REVIEW) | 71.4 % / 7.7 % |
 
+**Calibrated risk score** (`python -m src.calibrate_risk`): risk R means about R % of flows scored like this are
+real attacks, assuming attacks are 1 % of traffic (`RISK_BASE_RATE`). Logistic regression on
+[XGBoost attack logit, Isolation-Forest percentile, Rule R1] + isotonic calibration, fitted on validation, checked on
+test: calibration error 0.0098 → 0.0001; among ALERTs the median risk of false alarms fell from 92 to 25 while real
+attacks stay at 100 (ranking AUC 0.925 → 0.972), so analysts can triage alerts by risk.
+
 Design choices that cost accuracy on purpose (robustness over testbed score):
 - **No TCP fingerprint features** (`Init Win Bytes`, `Fwd Seg Size Min`) and **no header lengths**: header size per
   packet reveals the attacker machine's OS/TCP options, i.e. the lab's attack box, not the attack. Keeping it gave
