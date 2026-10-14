@@ -3,7 +3,9 @@ Run the API first:   uvicorn api.main:app --port 8000
 Then:                streamlit run dashboard/app.py
 """
 import os
+import time
 from datetime import datetime
+from pathlib import Path
 
 import altair as alt
 import pandas as pd
@@ -11,6 +13,7 @@ import requests
 import streamlit as st
 
 DEFAULT_API = os.getenv("SOC_API_URL", "http://127.0.0.1:8000")
+SAMPLE_CSV = Path(__file__).with_name("sample_flows.csv")
 SEV_COLORS = {"HIGH": "#d64545", "MEDIUM": "#e0a030", "LOW": "#8a94a6"}
 CONF_ICON = {"HIGH": "🟥", "MEDIUM": "🟧", "LOW": "⬜"}
 VERDICT_COLORS = {"ALERT": "#d64545", "REVIEW": "#e0a030", "NORMAL": "#5b8def"}
@@ -81,6 +84,8 @@ with st.sidebar:
     limit = st.number_input("Max incidents loaded", 50, 100000, 2000, step=500)
     if st.button("🔄 Refresh", width="stretch"):
         st.cache_data.clear()
+    auto = st.toggle("Auto-refresh", value=False, help="Reload incidents periodically (live monitoring)")
+    every = st.select_slider("Every (seconds)", [5, 10, 15, 30, 60], value=15, disabled=not auto)
 
 data = load_incidents(st.session_state.api, include_noise, int(limit))
 inc = pd.DataFrame(data["incidents"])
@@ -108,7 +113,40 @@ k[3].metric("Hidden as noise", data.get("hidden_noise_incidents", 0),
             help="Low-evidence incidents kept in the database but hidden from the queue")
 k[4].metric("Closed (with feedback)", int((inc["status"] == "CLOSED").sum()) if not inc.empty else 0)
 
-tab_q, tab_m, tab_s = st.tabs(["📋 Incident queue", "🎯 MITRE ATT&CK", "🧪 Score flows"])
+tab_o, tab_q, tab_m, tab_s = st.tabs(["📈 Overview", "📋 Incident queue", "🎯 MITRE ATT&CK", "🧪 Score flows"])
+
+# ---------------------------------------------------------------- tab 0: overview
+with tab_o:
+    if inc.empty:
+        st.info("No incidents yet.")
+    else:
+        ov = inc.copy()
+        ov["start"] = pd.to_datetime(ov["first_seen"])
+        ov["hour"] = ov["start"].dt.floor("h")
+        sev_scale = alt.Scale(domain=list(SEV_COLORS), range=list(SEV_COLORS.values()))
+        a, b = st.columns([1.4, 1])
+        with a:
+            st.markdown("#### Incidents over time")
+            st.altair_chart(alt.Chart(ov).mark_bar().encode(
+                x=alt.X("hour:T", title=None), y=alt.Y("count():Q", title="incidents started"),
+                color=alt.Color("severity:N", scale=sev_scale, legend=alt.Legend(orient="bottom")),
+                tooltip=["hour:T", "severity:N", "count():Q"]).properties(height=280), width="stretch")
+        with b:
+            st.markdown("#### Attack families")
+            fam = ov.groupby(["family", "severity"], as_index=False).agg(incidents=("id", "count"),
+                                                                       flows=("events", "sum"))
+            st.altair_chart(alt.Chart(fam).mark_bar().encode(
+                x=alt.X("incidents:Q"), y=alt.Y("family:N", sort="-x", title=None),
+                color=alt.Color("severity:N", scale=sev_scale, legend=None),
+                tooltip=["family", "severity", "incidents", "flows"]).properties(height=280), width="stretch")
+        st.markdown("#### Most attacked targets")
+        tgt = (ov.groupby("target", as_index=False)
+               .agg(incidents=("id", "count"), flows=("events", "sum"), max_risk=("max_risk", "max"),
+                    families=("family", lambda x: ", ".join(sorted(set(x)))))
+               .sort_values(["flows"], ascending=False).head(10))
+        st.dataframe(tgt, hide_index=True, width="stretch",
+                     column_config={"max_risk": st.column_config.ProgressColumn("Max risk", min_value=0,
+                                                                                max_value=100, format="%d")})
 
 # ---------------------------------------------------------------- tab 1: queue + detail
 with tab_q:
@@ -138,6 +176,8 @@ with tab_q:
             st.markdown(f"### Incident #{d['id']} &nbsp; {sev_badge(d['severity'])}", unsafe_allow_html=True)
             st.markdown(f"**{d['family']}** against **`{d['target']}`** · {d['sources']} source(s) · "
                         f"{fmt_time(d['first_seen'])} → {fmt_time(d['last_seen'])}")
+            if d.get("notified_at"):
+                st.caption(f"🔔 Slack/email notification sent {fmt_time(d['notified_at'])}")
             c = st.columns(4)
             c[0].metric("Flows", d["events"]); c[1].metric("Alerts", d["alerts"])
             c[2].metric("Reviews", d["reviews"]); c[3].metric("Max risk", d["max_risk"])
@@ -214,8 +254,11 @@ with tab_s:
     st.markdown("Upload a CSV of CICFlowMeter flows (same column names as the training data). "
                 "Each row is scored by the hybrid detector; nothing is stored.")
     up = st.file_uploader("Flows CSV", type=["csv"])
-    if up is not None:
-        flows = pd.read_csv(up)
+    use_sample = SAMPLE_CSV.exists() and st.checkbox(
+        f"Use the bundled demo file ({SAMPLE_CSV.name}: 1,060 labelled test flows, 9 attack types)")
+    src = up if up is not None else (SAMPLE_CSV if use_sample else None)
+    if src is not None:
+        flows = pd.read_csv(src)
         info = load_static(st.session_state.api, "/model-info")
         need = info.get("required_features") or info.get("features") or []
         missing = [f for f in need if f not in flows.columns]
@@ -245,5 +288,17 @@ with tab_s:
                 color=alt.Color("verdict:N", scale=alt.Scale(domain=list(VERDICT_COLORS),
                                                              range=list(VERDICT_COLORS.values())))),
                 width="stretch")
+            if "true_label" in r.columns:
+                st.markdown("#### Verdict by true label")
+                ct = pd.crosstab(r["true_label"], r["verdict"]).reindex(columns=list(VERDICT_COLORS), fill_value=0)
+                ct["flagged %"] = (100 * (ct["ALERT"] + ct["REVIEW"]) / ct.sum(axis=1)).round(1)
+                st.dataframe(ct, width="stretch")
             st.dataframe(r, hide_index=True, width="stretch")
             st.download_button("Download results CSV", r.to_csv(index=False), "scored_flows.csv", "text/csv")
+
+# ---------------------------------------------------------------- live refresh
+if auto:
+    st.caption(f"Auto-refresh on: next reload in {every}s")
+    time.sleep(every)
+    st.cache_data.clear()
+    st.rerun()

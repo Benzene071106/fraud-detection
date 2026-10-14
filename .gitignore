@@ -13,3 +13,4 @@ models/*
 !models/rule_*.json
 !reports/*.csv
 !models/*_decision.json
+!dashboard/*.csv

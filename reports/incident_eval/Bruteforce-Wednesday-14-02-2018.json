@@ -1,1 +1,1 @@
-{"day": "Bruteforce-Wednesday-14-02-2018", "rows": 36177, "flagged": 14296, "incidents": 211, "queue": 2, "real_in_queue": 2, "noise_in_queue": 0, "real_hidden": 0, "precision": 1.0, "attacks_found": "1/2", "missed": ["FTP-BruteForce"], "secs": 183}
+{"day": "Bruteforce-Wednesday-14-02-2018", "setup": "xgb_v1_nofp_nohdr_clean_r1500/flood_or", "rows": 36177, "flagged": 14305, "incidents": 219, "queue": 3, "real_in_queue": 3, "noise_in_queue": 0, "real_hidden": 1, "precision": 1.0, "attacks_found": "2/2", "missed": [], "secs": 109}

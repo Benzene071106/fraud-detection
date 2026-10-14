@@ -1,0 +1,1 @@
+{"day": "DDoS1-Tuesday-20-02-2018", "setup": "xgb_v1_nofp_nohdr_clean_r1500/flood_or", "rows": 102313, "flagged": 85412, "incidents": 212, "queue": 3, "real_in_queue": 2, "noise_in_queue": 1, "real_hidden": 0, "precision": 0.667, "attacks_found": "1/1", "missed": [], "secs": 627}

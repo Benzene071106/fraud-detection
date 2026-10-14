@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, case
@@ -12,6 +12,7 @@ from sqlalchemy import select, func, case
 from api.detector import HybridDetector, REVIEW_BUDGET
 from api.db import SessionLocal, init_db, Incident, Event
 from api.incidents import store_flagged
+from api import alerts
 from api.mitre import coverage, TECHNIQUES
 
 app = FastAPI(
@@ -72,7 +73,7 @@ def score(req: ScoreRequest):
 
 
 @app.post("/ingest")
-def ingest(req: IngestRequest):
+def ingest(req: IngestRequest, background: BackgroundTasks):
     feats = [f.features for f in req.flows]
     missing = detector.missing(feats)
     if missing:
@@ -85,7 +86,11 @@ def ingest(req: IngestRequest):
     with SessionLocal() as s:
         touched = store_flagged(s, req.flows, results)
         s.commit()
+        to_notify = claim_notifications(s, touched)
+    if to_notify:
+        background.add_task(send_notifications, to_notify)     # after the response: ingestion never waits on Slack/SMTP
     return {"scored": len(results),
+            "notifications_queued": len(to_notify),
             "alerts": sum(r["verdict"] == "ALERT" for r in results),
             "reviews": sum(r["verdict"] == "REVIEW" for r in results),
             "incidents_touched": touched}
@@ -149,6 +154,7 @@ def incident_dict(inc, sources=None):
             "status": inc.status, "first_seen": inc.first_seen.isoformat(), "last_seen": inc.last_seen.isoformat(),
             "events": inc.event_count, "alerts": inc.alert_count, "reviews": inc.review_count,
             "max_risk": inc.max_risk, "sources": sources, "analyst_verdict": inc.analyst_verdict,
+            "notified_at": inc.notified_at.isoformat() if inc.notified_at else None,
             "mitre": incident_techniques(inc, sources)}
 
 
@@ -210,6 +216,74 @@ def _split_reasons(raw):
     if isinstance(r, dict):
         return {"reasons": r.get("shap", []), "mitre": r.get("mitre", [])}
     return {"reasons": r, "mitre": []}                     # events stored before MITRE mapping
+
+
+def claim_notifications(s, incident_ids):
+    """Mark newly eligible incidents as notified (so each one is announced once) and return their payloads."""
+    if not alerts.enabled() or not incident_ids:
+        return []
+    incs = s.scalars(select(Incident).where(Incident.id.in_(list(incident_ids)), Incident.notified_at.is_(None),
+                                            Incident.status == "OPEN",
+                                            Incident.severity.in_(alerts.eligible_severities()))).all()
+    if not incs:
+        return []
+    now = datetime.now()
+    srcs = dict(s.execute(select(Event.incident_id, func.count(func.distinct(Event.src_ip)))
+                          .where(Event.incident_id.in_([i.id for i in incs])).group_by(Event.incident_id)).all())
+    payloads = [incident_dict(i, srcs.get(i.id, 0)) for i in incs]
+    for i in incs:
+        i.notified_at = now
+    s.commit()
+    return payloads
+
+
+def send_notifications(payloads):
+    for inc in payloads:
+        res = alerts.notify(inc)
+        if res and all(v != "ok" for v in res.values()):          # every channel failed: allow a retry later
+            with SessionLocal() as s:
+                row = s.get(Incident, inc["id"])
+                if row is not None:
+                    row.notified_at = None
+                    s.commit()
+
+
+@app.get("/alerts/config")
+def alerts_config():
+    """Which notification channels are configured (no secrets returned)."""
+    return alerts.config()
+
+
+@app.post("/alerts/test")
+def alerts_test():
+    """Send a sample notification on every configured channel and report the result."""
+    if not alerts.enabled():
+        raise HTTPException(status_code=400, detail="no channel configured: set SLACK_WEBHOOK_URL and/or "
+                                                    "SMTP_HOST + ALERT_EMAIL_TO")
+    sample = {"id": 0, "severity": "HIGH", "family": "BruteForce", "target": "192.0.2.10", "sources": 1,
+              "events": 120, "alerts": 120, "reviews": 0, "max_risk": 100,
+              "first_seen": datetime.now().isoformat(timespec="seconds"),
+              "last_seen": datetime.now().isoformat(timespec="seconds"),
+              "mitre": [{"technique_id": "T1110.001", "technique": "Brute Force: Password Guessing",
+                         "confidence": "HIGH"}]}
+    return {"test": True, "results": alerts.notify(sample)}
+
+
+@app.post("/incidents/{incident_id}/notify")
+def notify_incident(incident_id: int):
+    """Manually (re)send the notification for one incident."""
+    if not alerts.enabled():
+        raise HTTPException(status_code=400, detail="no notification channel configured")
+    with SessionLocal() as s:
+        inc = s.get(Incident, incident_id)
+        if inc is None:
+            raise HTTPException(status_code=404, detail="incident not found")
+        sources = s.scalar(select(func.count(func.distinct(Event.src_ip))).where(Event.incident_id == incident_id))
+        res = alerts.notify(incident_dict(inc, sources))
+        if any(v == "ok" for v in res.values()):
+            inc.notified_at = datetime.now()
+            s.commit()
+        return {"incident": incident_id, "results": res}
 
 
 @app.get("/mitre/coverage")

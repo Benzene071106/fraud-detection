@@ -31,6 +31,7 @@ class Incident(Base):
     analyst_verdict: Mapped[str | None] = mapped_column(String(4), nullable=True)
     analyst_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     techniques: Mapped[str | None] = mapped_column(Text, nullable=True)   # JSON {technique_id: {...counts}}
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)   # Slack/email sent
     events: Mapped[list["Event"]] = relationship(back_populates="incident")
 
 
@@ -53,10 +54,14 @@ class Event(Base):
     incident: Mapped[Incident] = relationship(back_populates="events")
 
 
+# lightweight migrations for databases created by older versions of the API
+NEW_COLUMNS = {"techniques": "TEXT", "notified_at": "TIMESTAMP"}
+
+
 def init_db():
     Base.metadata.create_all(engine)
-    # lightweight migration for databases created before MITRE mapping existed
     cols = {c["name"] for c in inspect(engine).get_columns("incidents")}
-    if "techniques" not in cols:
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE incidents ADD COLUMN techniques TEXT"))
+    for name, sql_type in NEW_COLUMNS.items():
+        if name not in cols:
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE incidents ADD COLUMN {name} {sql_type}"))
