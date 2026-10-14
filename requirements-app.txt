@@ -14,3 +14,7 @@ altair>=5
 requests>=2.31
 httpx>=0.27
 psycopg[binary]>=3.1     # PostgreSQL driver (only needed when DATABASE_URL points to PostgreSQL)
+scipy>=1.11
+evidently>=0.7          # drift HTML reports (optional; numbers are computed without it)
+mlflow>=2.14            # experiment tracking + model registry
+prometheus-client>=0.20   # GET /metrics

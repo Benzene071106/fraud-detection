@@ -28,16 +28,20 @@ def macro_f1_ex_inf(y, pred):
 
 
 def decide(P, thr, rule, mode):
-    """mode 'perclass' = Variant B; 'flood' = DoS+DDoS probabilities pooled before thresholding."""
+    """thr = 7 class thresholds (+ optional 8th: pooled DoS+DDoS threshold for flood_or).
+    perclass = Variant B; flood = DoS+DDoS pooled before thresholding;
+    flood_or = Variant B, plus still-benign flows with pooled DoS+DDoS >= thr[7] (deployed in the API)."""
+    pool = P[:, DOS] + P[:, DDOS]
+    top = np.where(P[:, DOS] >= P[:, DDOS], DOS, DDOS)
     Q = P.copy()
     if mode == "flood":
-        pool = P[:, DOS] + P[:, DDOS]
-        top = np.where(P[:, DOS] >= P[:, DDOS], DOS, DDOS)
         Q[:, DOS] = np.where(top == DOS, pool, 0)
         Q[:, DDOS] = np.where(top == DDOS, pool, 0)
-    masked = np.where(Q >= thr, Q, -1.0)
+    masked = np.where(Q >= thr[:K], Q, -1.0)
     masked[:, 0] = -0.5
     cls = masked.argmax(1)
+    if mode == "flood_or":
+        cls = np.where((cls == 0) & (pool >= thr[K]), top, cls)
     cls = np.where(rule & (cls == 0), BF, cls)
     alert = (cls != 0) & (cls != INF)
     return alert, np.where(alert, cls, 0), cls
@@ -51,10 +55,26 @@ FLOOD_GRID = {**GRID, "DoS": [0.9, 0.95, 0.97, 0.98, 0.99, 0.995], "DDoS": [0.9,
 
 
 def tune(P, y, rule, mode):
+    if mode == "flood_or":          # start from the Variant B optimum, then search DoS/DDoS/pool jointly
+        b = tune(P, y, rule, "perclass")
+        if b is None:
+            return None
+        base, best = b[2], None
+        for td, tdd, tp in itertools.product([0.6, 0.7, 0.8, 0.9, 0.95], [0.6, 0.7, 0.8, 0.9, 0.95],
+                                             [0.95, 0.97, 0.98, 0.99, 0.995]):
+            thr = base.copy(); thr[DOS], thr[DDOS], thr[K] = td, tdd, tp
+            alert, acls, _ = decide(P, thr, rule, mode)
+            fpr = alert[y == 0].mean()
+            if fpr > FPR_TARGET:
+                continue
+            f1 = macro_f1_ex_inf(y, acls)
+            if best is None or (f1, -fpr) > (best[0], -best[1]):
+                best = (f1, fpr, thr)
+        return best
     best = None
     grid = FLOOD_GRID if mode == "flood" else GRID
     for combo in itertools.product(*grid.values()):
-        thr = np.array([0.5, *combo, 0.9])
+        thr = np.array([0.5, *combo, 0.9, 1.01])
         alert, acls, _ = decide(P, thr, rule, mode)
         fpr = alert[y == 0].mean()
         if fpr > FPR_TARGET:
@@ -91,15 +111,33 @@ def report(P, y, ifs, rule, thr, mode):
     return row
 
 
+MODES = ["perclass", "flood", "flood_or"]
+
+
+def _save(df, path):
+    """Merge into an existing CSV by (variant, mode) so per-variant runs accumulate."""
+    if path.exists():
+        old = pd.read_csv(path)
+        old = old[~old.set_index(["variant", "mode"]).index.isin(df.set_index(["variant", "mode"]).index)]
+        df = pd.concat([old, df], ignore_index=True)
+    df.to_csv(path, index=False)
+
+
 def main():
+    """python -m src.eval_sweep [variant1,variant2] [--modes perclass,flood_or] [--test]"""
+    argv = sys.argv[1:]
+    only = next((a.split(",") for a in argv if not a.startswith("--") and argv.index(a) == 0), None)
+    modes = MODES
+    if "--modes" in argv:
+        modes = argv[argv.index("--modes") + 1].split(",")
     rows, chosen = [], {}
     for pf in sorted(OUT.glob("*_P.npz")):
         name = pf.name[:-6]
+        if only and name not in only:
+            continue
         P = np.load(pf)
-        for mode in ["perclass", "flood"]:
-            if len(sys.argv) > 1 and sys.argv[1] not in ("--test",) and name not in sys.argv[1].split(","):
-                continue
-            print(f"{name}/{mode}")
+        for mode in modes:
+            print(f"{name}/{mode}", flush=True)
             b = tune(P["P_va"], A["y_va"], A["rule_va"], mode)
             if b is None:
                 print(f"{name}/{mode}: no setting meets FPR target"); continue
@@ -107,7 +145,7 @@ def main():
             ti = tune_inf(P["P_va"], A["y_va"], A["if_va"], thr, A["rule_va"], mode)
             if ti: thr[INF] = ti[0]
             r = report(P["P_va"], A["y_va"], A["if_va"], A["rule_va"], thr, mode)
-            rows.append({"variant": name, "mode": mode, **r, "thr": np.round(thr, 2).tolist()})
+            rows.append({"variant": name, "mode": mode, **r, "thr": np.round(thr, 3).tolist()})
             chosen[(name, mode)] = thr
 
     res = pd.DataFrame(rows).sort_values("macroF1_exInf", ascending=False)
@@ -115,15 +153,19 @@ def main():
     print("\n=== VALIDATION (selection) ===")
     print(res.drop(columns="thr").round(4).to_string(index=False))
     print(res[["variant", "mode", "thr"]].to_string(index=False))
+    _save(res, ROOT / "reports" / "sweep_validation.csv")
 
-    if "--test" in sys.argv:
+    if "--test" in argv:
         print("\n=== TEST (read once, for the report) ===")
         trows = []
         for (name, mode), thr in chosen.items():
             P = np.load(OUT / f"{name}_P.npz")
             trows.append({"variant": name, "mode": mode,
-                          **report(P["P_te"], A["y_te"], A["if_te"], A["rule_te"], thr, mode)})
-        print(pd.DataFrame(trows).round(4).to_string(index=False))
+                          **report(P["P_te"], A["y_te"], A["if_te"], A["rule_te"], thr, mode),
+                          "thr": np.round(thr, 3).tolist()})
+        t = pd.DataFrame(trows)
+        print(t.drop(columns="thr").round(4).to_string(index=False))
+        _save(t, ROOT / "reports" / "sweep_test.csv")
 
 
 if __name__ == "__main__":

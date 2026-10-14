@@ -1,0 +1,18 @@
+# Whitelist: everything is excluded except what the image needs
+*
+!api/
+!dashboard/
+!src/
+!requirements-docker.txt
+!models/xgb_v1_nofp_nohdr_clean_r1500.json
+!models/xgb_v1_nofp_nohdr_clean_r1500_config.json
+!models/xgb_v1_nofp_nohdr_clean_r1500_decision.json
+!models/xgb_v1_nofp_nohdr_clean_r1500_variantB_thresholds.json
+!models/iforest_v2.joblib
+!models/iforest_v2_config.json
+!models/iforest_v2_val_benign_scores.npy
+!models/benign_medians.json
+!models/rule_r1_ssh_bounds_v2.json
+!models/hybrid_v2_config.json
+**/__pycache__
+**/*.pyc

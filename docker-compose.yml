@@ -1,0 +1,107 @@
+# Full stack:  docker compose up -d --build
+#   API        http://localhost:8000/docs      Dashboard  http://localhost:8501
+#   Prometheus http://localhost:9090           Grafana    http://localhost:3000  (admin / admin)
+#   PostgreSQL localhost:5432 (soc / soc)  -> Power BI can connect here
+# Demo data:   docker compose --profile demo run --rm replay
+# Alerts:      put SLACK_WEBHOOK_URL / SMTP_* in a .env file next to this file (never commit it)
+name: soc
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: soc
+      POSTGRES_PASSWORD: soc
+      POSTGRES_DB: soc
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U soc -d soc"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build: .
+    image: soc-threat-detector:latest
+    environment:
+      DATABASE_URL: postgresql+psycopg://soc:soc@postgres:5432/soc
+      DASHBOARD_URL: http://localhost:8501
+      ALERT_MIN_SEVERITY: ${ALERT_MIN_SEVERITY:-HIGH}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
+    volumes:
+      - ./reports/drift:/app/reports/drift:ro      # latest drift report -> GET /drift and Prometheus gauges
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    image: soc-threat-detector:latest
+    command: ["streamlit", "run", "dashboard/app.py", "--server.address=0.0.0.0", "--server.port=8501",
+              "--server.headless=true", "--browser.gatherUsageStats=false"]
+    environment:
+      SOC_API_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/soc-overview.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  replay:                                         # one-shot demo traffic: docker compose --profile demo run --rm replay
+    image: soc-threat-detector:latest
+    profiles: ["demo"]
+    command: ["python", "-m", "src.replay_ingest", "--url", "http://api:8000"]
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:

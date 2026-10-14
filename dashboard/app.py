@@ -113,7 +113,44 @@ k[3].metric("Hidden as noise", data.get("hidden_noise_incidents", 0),
             help="Low-evidence incidents kept in the database but hidden from the queue")
 k[4].metric("Closed (with feedback)", int((inc["status"] == "CLOSED").sum()) if not inc.empty else 0)
 
-tab_o, tab_q, tab_m, tab_s = st.tabs(["📈 Overview", "📋 Incident queue", "🎯 MITRE ATT&CK", "🧪 Score flows"])
+tab_o, tab_q, tab_m, tab_d, tab_s = st.tabs(["📈 Overview", "📋 Incident queue", "🎯 MITRE ATT&CK",
+                                                "🌊 Drift", "🧪 Score flows"])
+
+# ---------------------------------------------------------------- tab: drift
+with tab_d:
+    try:
+        dr = api_get("/drift")
+    except requests.HTTPError:
+        dr = None
+        st.info("No drift report yet. Run `python -m src.drift_monitor` (about 1-2 minutes).")
+    if dr:
+        st.caption(f"Generated {dr['generated']} · model `{dr['model']}` · feature drifts if "
+                   f"{dr['rules']['feature_drift']}, window drifts if {dr['rules']['dataset_drift']} "
+                   "(measured on flows the model calls NORMAL, so it needs no labels)")
+        w = pd.DataFrame(dr["windows"])
+        cards = st.columns(len(w) - 1 or 1)
+        for col, (_, r) in zip(cards, w.iloc[1:].iterrows()):
+            col.metric(r["window"].split(" (")[0], f"{int(r['drifted_features'])}/{int(r['features'])} drifted",
+                       "DRIFT" if r["dataset_drift"] else "stable",
+                       delta_color="inverse" if r["dataset_drift"] else "off")
+        a, b = st.columns(2)
+        with a:
+            st.markdown("#### Feature drift vs detection")
+            ch = w.iloc[1:].assign(**{"drifted %": lambda x: 100 * x["share_drifted"]})
+            base = alt.Chart(ch).encode(y=alt.Y("window:N", sort=None, title=None))
+            st.altair_chart(base.mark_bar(color="#5b8def").encode(
+                x=alt.X("drifted %:Q", title="% of model features drifted", scale=alt.Scale(domain=[0, 100])),
+                tooltip=["window", "drifted_features", "median_psi"]).properties(height=230), width="stretch")
+        with b:
+            st.markdown("#### Attack detection on that traffic")
+            st.altair_chart(base.mark_bar(color="#d64545").encode(
+                x=alt.X("attack_detect%:Q", title="% of attack flows flagged", scale=alt.Scale(domain=[0, 100])),
+                tooltip=["window", "attack_detect%", "benign_alert_rate%"]).properties(height=230), width="stretch")
+        st.dataframe(w[["window", "flows", "attack_share%", "drifted_features", "dataset_drift", "median_psi",
+                        "alert_rate%", "benign_alert_rate%", "attack_detect%"]].round(2),
+                     hide_index=True, width="stretch")
+        with st.expander("Most drifted features per window"):
+            st.dataframe(pd.DataFrame(dr["top_features"]), hide_index=True, width="stretch")
 
 # ---------------------------------------------------------------- tab 0: overview
 with tab_o:
@@ -121,7 +158,7 @@ with tab_o:
         st.info("No incidents yet.")
     else:
         ov = inc.copy()
-        ov["start"] = pd.to_datetime(ov["first_seen"])
+        ov["start"] = pd.to_datetime(ov["first_seen"], format="ISO8601")
         ov["hour"] = ov["start"].dt.floor("h")
         sev_scale = alt.Scale(domain=list(SEV_COLORS), range=list(SEV_COLORS.values()))
         a, b = st.columns([1.4, 1])

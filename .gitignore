@@ -14,3 +14,7 @@ models/*
 !reports/*.csv
 !models/*_decision.json
 !dashboard/*.csv
+reports/drift/*.html
+mlflow.db
+mlruns/
+.env

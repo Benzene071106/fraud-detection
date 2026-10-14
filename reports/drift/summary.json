@@ -1,0 +1,544 @@
+{
+ "generated": "2026-10-14 18:18:16",
+ "model": "xgb_v1_nofp_nohdr_clean_r1500/flood_or",
+ "rules": {
+  "feature_drift": "PSI > 0.2",
+  "dataset_drift": ">= 50% of features drifted"
+ },
+ "windows": [
+  {
+   "window": "REFERENCE 2018 validation",
+   "flows": 30000,
+   "attack_share%": 46.917,
+   "drifted_features": 0,
+   "features": 64,
+   "share_drifted": 0.0,
+   "dataset_drift": false,
+   "median_psi": 0.0,
+   "drifted_features_all_traffic": 0,
+   "alert_rate%": 40.993,
+   "review_rate%": 0.843,
+   "iforest_pct_psi": 0.0,
+   "benign_alert_rate%": 0.201,
+   "attack_detect%": 87.78,
+   "Bot_detect%": 99.084,
+   "BruteForce_detect%": 99.715,
+   "DDoS_detect%": 96.521,
+   "DoS_detect%": 91.031,
+   "Infiltration_detect%": 6.889,
+   "Web_detect%": 44.444
+  },
+  {
+   "window": "2018 Web2 (same network)",
+   "flows": 20000,
+   "attack_share%": 0.24,
+   "drifted_features": 12,
+   "features": 64,
+   "share_drifted": 0.188,
+   "dataset_drift": false,
+   "median_psi": 0.09,
+   "drifted_features_all_traffic": 31,
+   "alert_rate%": 0.25,
+   "review_rate%": 1.025,
+   "iforest_pct_psi": 0.731,
+   "benign_alert_rate%": 0.145,
+   "attack_detect%": 66.667,
+   "Bot_detect%": null,
+   "BruteForce_detect%": null,
+   "DDoS_detect%": null,
+   "DoS_detect%": null,
+   "Infiltration_detect%": null,
+   "Web_detect%": 66.667
+  },
+  {
+   "window": "2018 DoS1 (same network)",
+   "flows": 20000,
+   "attack_share%": 19.435,
+   "drifted_features": 13,
+   "features": 64,
+   "share_drifted": 0.203,
+   "dataset_drift": false,
+   "median_psi": 0.077,
+   "drifted_features_all_traffic": 28,
+   "alert_rate%": 19.6,
+   "review_rate%": 0.76,
+   "iforest_pct_psi": 0.572,
+   "benign_alert_rate%": 0.354,
+   "attack_detect%": 99.383,
+   "Bot_detect%": null,
+   "BruteForce_detect%": null,
+   "DDoS_detect%": null,
+   "DoS_detect%": 99.383,
+   "Infiltration_detect%": null,
+   "Web_detect%": null
+  },
+  {
+   "window": "2018 Botnet (same network)",
+   "flows": 20000,
+   "attack_share%": 44.85,
+   "drifted_features": 11,
+   "features": 64,
+   "share_drifted": 0.172,
+   "dataset_drift": false,
+   "median_psi": 0.114,
+   "drifted_features_all_traffic": 39,
+   "alert_rate%": 44.6,
+   "review_rate%": 0.95,
+   "iforest_pct_psi": 0.694,
+   "benign_alert_rate%": 0.199,
+   "attack_detect%": 99.208,
+   "Bot_detect%": 99.208,
+   "BruteForce_detect%": null,
+   "DDoS_detect%": null,
+   "DoS_detect%": null,
+   "Infiltration_detect%": null,
+   "Web_detect%": null
+  },
+  {
+   "window": "2017 Thu WebAttacks (new network)",
+   "flows": 20000,
+   "attack_share%": 1.46,
+   "drifted_features": 43,
+   "features": 64,
+   "share_drifted": 0.672,
+   "dataset_drift": true,
+   "median_psi": 0.439,
+   "drifted_features_all_traffic": 43,
+   "alert_rate%": 0.35,
+   "review_rate%": 3.065,
+   "iforest_pct_psi": 1.448,
+   "benign_alert_rate%": 0.355,
+   "attack_detect%": 5.822,
+   "Bot_detect%": null,
+   "BruteForce_detect%": null,
+   "DDoS_detect%": null,
+   "DoS_detect%": null,
+   "Infiltration_detect%": null,
+   "Web_detect%": 5.822
+  },
+  {
+   "window": "2017 Wed DoS (new network)",
+   "flows": 20000,
+   "attack_share%": 35.16,
+   "drifted_features": 43,
+   "features": 64,
+   "share_drifted": 0.672,
+   "dataset_drift": true,
+   "median_psi": 0.51,
+   "drifted_features_all_traffic": 44,
+   "alert_rate%": 0.965,
+   "review_rate%": 2.65,
+   "iforest_pct_psi": 2.043,
+   "benign_alert_rate%": 0.339,
+   "attack_detect%": 4.636,
+   "Bot_detect%": null,
+   "BruteForce_detect%": null,
+   "DDoS_detect%": null,
+   "DoS_detect%": 4.636,
+   "Infiltration_detect%": null,
+   "Web_detect%": null
+  }
+ ],
+ "top_features": [
+  {
+   "window": "2018 Web2 (same network)",
+   "feature": "Packet Length Max",
+   "psi": 0.4635,
+   "ks": 0.085,
+   "ref_median": 182.0,
+   "cur_median": 145.0
+  },
+  {
+   "window": "2018 Web2 (same network)",
+   "feature": "Fwd Packet Length Std",
+   "psi": 0.4613,
+   "ks": 0.149,
+   "ref_median": 37.4767,
+   "cur_median": 17.8979
+  },
+  {
+   "window": "2018 Web2 (same network)",
+   "feature": "Subflow Fwd Packets",
+   "psi": 0.4223,
+   "ks": 0.0724,
+   "ref_median": 3.0,
+   "cur_median": 3.0
+  },
+  {
+   "window": "2018 Web2 (same network)",
+   "feature": "Total Fwd Packets",
+   "psi": 0.4223,
+   "ks": 0.0724,
+   "ref_median": 3.0,
+   "cur_median": 3.0
+  },
+  {
+   "window": "2018 Web2 (same network)",
+   "feature": "Fwd Packet Length Max",
+   "psi": 0.3464,
+   "ks": 0.1313,
+   "ref_median": 84.0,
+   "cur_median": 49.0
+  },
+  {
+   "window": "2018 Web2 (same network)",
+   "feature": "Avg Fwd Segment Size",
+   "psi": 0.3377,
+   "ks": 0.1478,
+   "ref_median": 45.6154,
+   "cur_median": 41.0
+  },
+  {
+   "window": "2018 Web2 (same network)",
+   "feature": "Fwd Packet Length Mean",
+   "psi": 0.3377,
+   "ks": 0.1478,
+   "ref_median": 45.6154,
+   "cur_median": 41.0
+  },
+  {
+   "window": "2018 Web2 (same network)",
+   "feature": "Bwd Packet Length Max",
+   "psi": 0.3241,
+   "ks": 0.0683,
+   "ref_median": 171.0,
+   "cur_median": 143.0
+  },
+  {
+   "window": "2018 Web2 (same network)",
+   "feature": "Bwd Packet Length Std",
+   "psi": 0.2328,
+   "ks": 0.0696,
+   "ref_median": 21.9203,
+   "cur_median": 0.0
+  },
+  {
+   "window": "2018 Web2 (same network)",
+   "feature": "Flow IAT Min",
+   "psi": 0.2149,
+   "ks": 0.1296,
+   "ref_median": 39.0,
+   "cur_median": 66.0
+  },
+  {
+   "window": "2018 DoS1 (same network)",
+   "feature": "Packet Length Max",
+   "psi": 0.5417,
+   "ks": 0.1435,
+   "ref_median": 182.0,
+   "cur_median": 132.0
+  },
+  {
+   "window": "2018 DoS1 (same network)",
+   "feature": "Fwd Packet Length Std",
+   "psi": 0.4891,
+   "ks": 0.1604,
+   "ref_median": 37.4767,
+   "cur_median": 0.0
+  },
+  {
+   "window": "2018 DoS1 (same network)",
+   "feature": "Fwd Packet Length Max",
+   "psi": 0.3902,
+   "ks": 0.1684,
+   "ref_median": 84.0,
+   "cur_median": 46.0
+  },
+  {
+   "window": "2018 DoS1 (same network)",
+   "feature": "Fwd Packet Length Mean",
+   "psi": 0.3583,
+   "ks": 0.1619,
+   "ref_median": 45.6154,
+   "cur_median": 40.0
+  },
+  {
+   "window": "2018 DoS1 (same network)",
+   "feature": "Avg Fwd Segment Size",
+   "psi": 0.3583,
+   "ks": 0.1619,
+   "ref_median": 45.6154,
+   "cur_median": 40.0
+  },
+  {
+   "window": "2018 DoS1 (same network)",
+   "feature": "Bwd Packet Length Max",
+   "psi": 0.3508,
+   "ks": 0.1089,
+   "ref_median": 171.0,
+   "cur_median": 132.0
+  },
+  {
+   "window": "2018 DoS1 (same network)",
+   "feature": "Total Fwd Packets",
+   "psi": 0.298,
+   "ks": 0.1228,
+   "ref_median": 3.0,
+   "cur_median": 3.0
+  },
+  {
+   "window": "2018 DoS1 (same network)",
+   "feature": "Subflow Fwd Packets",
+   "psi": 0.298,
+   "ks": 0.1228,
+   "ref_median": 3.0,
+   "cur_median": 3.0
+  },
+  {
+   "window": "2018 DoS1 (same network)",
+   "feature": "Fwd IAT Total",
+   "psi": 0.2583,
+   "ks": 0.1104,
+   "ref_median": 152873.0,
+   "cur_median": 62086.5
+  },
+  {
+   "window": "2018 DoS1 (same network)",
+   "feature": "Bwd Packet Length Std",
+   "psi": 0.2535,
+   "ks": 0.1107,
+   "ref_median": 21.9203,
+   "cur_median": 0.0
+  },
+  {
+   "window": "2018 Botnet (same network)",
+   "feature": "Packet Length Max",
+   "psi": 0.6425,
+   "ks": 0.1323,
+   "ref_median": 182.0,
+   "cur_median": 181.0
+  },
+  {
+   "window": "2018 Botnet (same network)",
+   "feature": "Fwd Packet Length Std",
+   "psi": 0.5512,
+   "ks": 0.136,
+   "ref_median": 37.4767,
+   "cur_median": 38.7427
+  },
+  {
+   "window": "2018 Botnet (same network)",
+   "feature": "Bwd Packet Length Max",
+   "psi": 0.4552,
+   "ks": 0.1343,
+   "ref_median": 171.0,
+   "cur_median": 169.5
+  },
+  {
+   "window": "2018 Botnet (same network)",
+   "feature": "Fwd Packet Length Max",
+   "psi": 0.4383,
+   "ks": 0.1361,
+   "ref_median": 84.0,
+   "cur_median": 97.0
+  },
+  {
+   "window": "2018 Botnet (same network)",
+   "feature": "Avg Fwd Segment Size",
+   "psi": 0.3872,
+   "ks": 0.1331,
+   "ref_median": 45.6154,
+   "cur_median": 45.0
+  },
+  {
+   "window": "2018 Botnet (same network)",
+   "feature": "Fwd Packet Length Mean",
+   "psi": 0.3872,
+   "ks": 0.1331,
+   "ref_median": 45.6154,
+   "cur_median": 45.0
+  },
+  {
+   "window": "2018 Botnet (same network)",
+   "feature": "Total Fwd Packets",
+   "psi": 0.3809,
+   "ks": 0.1306,
+   "ref_median": 3.0,
+   "cur_median": 3.0
+  },
+  {
+   "window": "2018 Botnet (same network)",
+   "feature": "Subflow Fwd Packets",
+   "psi": 0.3809,
+   "ks": 0.1306,
+   "ref_median": 3.0,
+   "cur_median": 3.0
+  },
+  {
+   "window": "2018 Botnet (same network)",
+   "feature": "Bwd Packet Length Std",
+   "psi": 0.3101,
+   "ks": 0.1311,
+   "ref_median": 21.9203,
+   "cur_median": 42.7827
+  },
+  {
+   "window": "2018 Botnet (same network)",
+   "feature": "Subflow Bwd Bytes",
+   "psi": 0.2591,
+   "ks": 0.1321,
+   "ref_median": 232.0,
+   "cur_median": 231.0
+  },
+  {
+   "window": "2017 Thu WebAttacks (new network)",
+   "feature": "Packet Length Max",
+   "psi": 0.9998,
+   "ks": 0.2142,
+   "ref_median": 182.0,
+   "cur_median": 112.0
+  },
+  {
+   "window": "2017 Thu WebAttacks (new network)",
+   "feature": "Fwd Packets Length Total",
+   "psi": 0.9701,
+   "ks": 0.2142,
+   "ref_median": 97.0,
+   "cur_median": 76.0
+  },
+  {
+   "window": "2017 Thu WebAttacks (new network)",
+   "feature": "Subflow Fwd Bytes",
+   "psi": 0.9701,
+   "ks": 0.2142,
+   "ref_median": 97.0,
+   "cur_median": 76.0
+  },
+  {
+   "window": "2017 Thu WebAttacks (new network)",
+   "feature": "Fwd IAT Max",
+   "psi": 0.8865,
+   "ks": 0.3267,
+   "ref_median": 109433.0,
+   "cur_median": 48.0
+  },
+  {
+   "window": "2017 Thu WebAttacks (new network)",
+   "feature": "Bwd IAT Min",
+   "psi": 0.8424,
+   "ks": 0.2893,
+   "ref_median": 1.0,
+   "cur_median": 3.0
+  },
+  {
+   "window": "2017 Thu WebAttacks (new network)",
+   "feature": "Flow Packets/s",
+   "psi": 0.8275,
+   "ks": 0.1709,
+   "ref_median": 16.8036,
+   "cur_median": 63.6092
+  },
+  {
+   "window": "2017 Thu WebAttacks (new network)",
+   "feature": "Packet Length Variance",
+   "psi": 0.8253,
+   "ks": 0.204,
+   "ref_median": 5461.3335,
+   "cur_median": 1240.3333
+  },
+  {
+   "window": "2017 Thu WebAttacks (new network)",
+   "feature": "Packet Length Std",
+   "psi": 0.8187,
+   "ks": 0.2014,
+   "ref_median": 73.9008,
+   "cur_median": 35.2184
+  },
+  {
+   "window": "2017 Thu WebAttacks (new network)",
+   "feature": "Flow Duration",
+   "psi": 0.7954,
+   "ks": 0.1794,
+   "ref_median": 304219.0,
+   "cur_median": 60419.0
+  },
+  {
+   "window": "2017 Thu WebAttacks (new network)",
+   "feature": "Bwd Packets/s",
+   "psi": 0.7822,
+   "ks": 0.2187,
+   "ref_median": 3.5879,
+   "cur_median": 21.6558
+  },
+  {
+   "window": "2017 Wed DoS (new network)",
+   "feature": "Packet Length Max",
+   "psi": 1.4116,
+   "ks": 0.3915,
+   "ref_median": 182.0,
+   "cur_median": 274.0
+  },
+  {
+   "window": "2017 Wed DoS (new network)",
+   "feature": "Packet Length Variance",
+   "psi": 1.4019,
+   "ks": 0.3613,
+   "ref_median": 5461.3335,
+   "cur_median": 19660.8
+  },
+  {
+   "window": "2017 Wed DoS (new network)",
+   "feature": "Packet Length Std",
+   "psi": 1.399,
+   "ks": 0.3613,
+   "ref_median": 73.9008,
+   "cur_median": 140.217
+  },
+  {
+   "window": "2017 Wed DoS (new network)",
+   "feature": "Bwd Packet Length Std",
+   "psi": 1.2371,
+   "ks": 0.3641,
+   "ref_median": 21.9203,
+   "cur_median": 22.6274
+  },
+  {
+   "window": "2017 Wed DoS (new network)",
+   "feature": "Bwd Packet Length Max",
+   "psi": 1.2193,
+   "ks": 0.3768,
+   "ref_median": 171.0,
+   "cur_median": 223.0
+  },
+  {
+   "window": "2017 Wed DoS (new network)",
+   "feature": "Bwd IAT Min",
+   "psi": 1.1985,
+   "ks": 0.2954,
+   "ref_median": 1.0,
+   "cur_median": 4.0
+  },
+  {
+   "window": "2017 Wed DoS (new network)",
+   "feature": "Subflow Fwd Bytes",
+   "psi": 1.1821,
+   "ks": 0.2299,
+   "ref_median": 97.0,
+   "cur_median": 280.0
+  },
+  {
+   "window": "2017 Wed DoS (new network)",
+   "feature": "Fwd Packets Length Total",
+   "psi": 1.1821,
+   "ks": 0.2299,
+   "ref_median": 97.0,
+   "cur_median": 280.0
+  },
+  {
+   "window": "2017 Wed DoS (new network)",
+   "feature": "Fwd Packet Length Max",
+   "psi": 1.1806,
+   "ks": 0.2474,
+   "ref_median": 84.0,
+   "cur_median": 190.0
+  },
+  {
+   "window": "2017 Wed DoS (new network)",
+   "feature": "Avg Packet Size",
+   "psi": 1.1146,
+   "ks": 0.3567,
+   "ref_median": 92.7143,
+   "cur_median": 141.0
+  }
+ ]
+}

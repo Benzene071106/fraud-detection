@@ -1,0 +1,1 @@
+{"day": "Infil2-Thursday-01-03-2018", "setup": "xgb_v1_nofp_nohdr_clean_r1500/flood_or", "rows": 17086, "flagged": 1128, "incidents": 210, "queue": 5, "real_in_queue": 5, "noise_in_queue": 0, "real_hidden": 1, "precision": 1.0, "attacks_found": "1/1", "missed": [], "secs": 10}

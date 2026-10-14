@@ -1,0 +1,26 @@
+groups:
+  - name: soc
+    rules:
+      - alert: HighSeverityIncidentOpen
+        expr: soc_open_incidents{severity="HIGH"} > 0
+        for: 1m
+        labels: {severity: page}
+        annotations:
+          summary: "{{ $value }} HIGH incident(s) open in the analyst queue"
+      - alert: ModelDriftDetected
+        expr: soc_drift_alarm == 1
+        labels: {severity: warning}
+        annotations:
+          summary: "Drift on window {{ $labels.window }}: retraining / review needed"
+      - alert: ScoringSlow
+        expr: histogram_quantile(0.95, sum by (le) (rate(soc_scoring_seconds_bucket[5m]))) > 5
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "p95 scoring time above 5 s per request"
+      - alert: ApiDown
+        expr: up{job="soc-api"} == 0
+        for: 1m
+        labels: {severity: page}
+        annotations:
+          summary: "Threat detection API is not reachable"

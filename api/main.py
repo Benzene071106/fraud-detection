@@ -1,18 +1,20 @@
 """Threat Detection API - scores flows, stores flagged events, groups them into incidents."""
 import json
 import os
+import time
+from pathlib import Path
 from datetime import datetime
 from typing import Literal
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, case
 
 from api.detector import HybridDetector, REVIEW_BUDGET
 from api.db import SessionLocal, init_db, Incident, Event
 from api.incidents import store_flagged
-from api import alerts
+from api import alerts, metrics
 from api.mitre import coverage, TECHNIQUES
 
 app = FastAPI(
@@ -69,7 +71,10 @@ def score(req: ScoreRequest):
     missing = detector.missing(req.flows)
     if missing:
         raise HTTPException(status_code=422, detail={"missing_features": missing})
-    return {"model": detector.xgb_tag, "results": detector.score(req.flows, req.explain, req.top_k)}
+    t0 = time.perf_counter()
+    results = detector.score(req.flows, req.explain, req.top_k)
+    metrics.record("score", results, time.perf_counter() - t0)
+    return {"model": detector.xgb_tag, "results": results}
 
 
 @app.post("/ingest")
@@ -78,11 +83,13 @@ def ingest(req: IngestRequest, background: BackgroundTasks):
     missing = detector.missing(feats)
     if missing:
         raise HTTPException(status_code=422, detail={"missing_features": missing})
+    t0 = time.perf_counter()
     results = detector.score(feats, explain=False)
     flagged = [i for i, r in enumerate(results) if r["verdict"] != "NORMAL"]
     if flagged:                                      # explain only flagged flows (faster)
         for i, r in zip(flagged, detector.score([feats[i] for i in flagged], explain=True, top_k=3)):
             results[i] = r
+    metrics.record("ingest", results, time.perf_counter() - t0)
     with SessionLocal() as s:
         touched = store_flagged(s, req.flows, results)
         s.commit()
@@ -240,12 +247,22 @@ def claim_notifications(s, incident_ids):
 def send_notifications(payloads):
     for inc in payloads:
         res = alerts.notify(inc)
+        metrics.record_notification(res)
         if res and all(v != "ok" for v in res.values()):          # every channel failed: allow a retry later
             with SessionLocal() as s:
                 row = s.get(Incident, inc["id"])
                 if row is not None:
                     row.notified_at = None
                     s.commit()
+
+
+metrics.setup(SessionLocal, Incident, noise_clause, detector.xgb_tag, detector.mode)
+
+
+@app.get("/metrics", include_in_schema=False)
+def prometheus_metrics():
+    body, ctype = metrics.render()
+    return Response(content=body, media_type=ctype)
 
 
 @app.get("/alerts/config")
@@ -284,6 +301,15 @@ def notify_incident(incident_id: int):
             inc.notified_at = datetime.now()
             s.commit()
         return {"incident": incident_id, "results": res}
+
+
+@app.get("/drift")
+def drift_report():
+    """Latest drift report written by `python -m src.drift_monitor` (reports/drift/summary.json)."""
+    f = Path(__file__).resolve().parents[1] / "reports" / "drift" / "summary.json"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="no drift report yet: run python -m src.drift_monitor")
+    return json.loads(f.read_text())
 
 
 @app.get("/mitre/coverage")

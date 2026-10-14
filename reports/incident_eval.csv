@@ -1,3 +1,11 @@
-day,rows,flagged,incidents,queue,real_in_queue,noise_in_queue,real_hidden,precision,attacks_found,missed,secs
-Bruteforce-Wednesday-14-02-2018,36177,14296,211,2,2,0,0,1.0,1/2,['FTP-BruteForce'],172
-DDoS1-Tuesday-20-02-2018,102313,85353,210,3,2,1,0,0.667,1/1,[],761
+day,setup,rows,flagged,incidents,queue,real_in_queue,noise_in_queue,real_hidden,precision,attacks_found,missed,secs
+Botnet-Friday-02-03-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,48273,21948,439,1,1,0,1,1.0,1/1,[],168
+Bruteforce-Wednesday-14-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,36177,14305,219,3,3,0,1,1.0,2/2,[],109
+DDoS1-Tuesday-20-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,102313,85412,212,3,2,1,0,0.667,1/1,[],627
+DDoS2-Wednesday-21-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,45267,27466,78,3,3,0,0,1.0,2/2,[],200
+DoS1-Thursday-15-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,38859,7993,403,3,3,0,0,1.0,2/2,[],64
+DoS2-Friday-16-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,40954,19248,20,1,1,0,0,1.0,1/2,['DoS attacks-SlowHTTPTest'],143
+Infil1-Wednesday-28-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,25684,1050,550,5,5,0,0,1.0,1/1,[],13
+Infil2-Thursday-01-03-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,17086,1128,210,5,5,0,1,1.0,1/1,[],10
+Web1-Thursday-22-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,35061,414,368,3,3,0,1,1.0,3/3,[],10
+Web2-Friday-23-02-2018,xgb_v1_nofp_nohdr_clean_r1500/flood_or,34905,485,413,4,4,0,0,1.0,3/3,[],10
