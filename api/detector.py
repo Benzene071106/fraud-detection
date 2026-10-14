@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 
+from api.mitre import map_flow
+
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_DIR = ROOT / "models"
 XGB_TAG = "xgb_v1_nofp_clean_r1500"
@@ -109,6 +111,8 @@ class HybridDetector:
                     "iforest_percentile": round(float(pct[i]), 4),
                 },
             }
+            out["mitre"] = (map_flow(family, verdict, df.iloc[i].to_dict(), p_att, bool(rule[i]))
+                            if verdict != "NORMAL" else [])
             if explain:
                 top = np.argsort(contrib[i, k, :self.F])[::-1][:top_k]
                 out["reasons"] = [{
